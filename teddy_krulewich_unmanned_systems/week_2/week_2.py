@@ -4,7 +4,7 @@ import numpy as np
 import math
 
 class Node:
-    def __init__(self, x, y, parent_node, index):
+    def __init__(self, x: float, y: float, parent_node, index : int):
         self.x = x
         self.y = y
 
@@ -13,10 +13,10 @@ class Node:
 
         self.cost = math.inf
     
-    def distance(self, other):
+    def distance(self, other) -> float:
         return math.sqrt( (self.x - other.x)**2 + (self.y - other.y) ** 2 )
     
-    def __lt__(self, other):
+    def __lt__(self, other) -> bool:
         return self.cost < other.cost
 
 
@@ -27,13 +27,13 @@ class Obstacle:
 
         self.diameter = diameter
     
-    def collides_with(self, node: Node):
+    def collides_with(self, node: Node) -> bool:
         if (math.sqrt( (self.x - node.x)**2 + (self.y - node.y)**2) <= self.diameter / 2.0):
             return True
         
         return False
     
-    def draw(self):
+    def draw(self) -> None:
         circle = plt.Circle( (self.x, self.y), self.diameter / 2.0, color='blue')
         plt.gca().add_patch(circle)
 
@@ -51,8 +51,8 @@ class Grid:
 
         self.spacing = spacing
 
-        self.Nodes = []
-        self.Obstacles = []
+        self.Nodes : list[Node] = []
+        self.Obstacles : list[Obstacle] = []
 
         index = 0
         for y in np.arange(min_y, max_y + spacing, spacing):
@@ -60,7 +60,7 @@ class Grid:
                 self.Nodes.append(Node(x, y, None, index))
                 index += 1
     
-    def get_node_index(self, x: float, y : float):
+    def get_node_index(self, x: float, y : float) -> int:
         """Gets index of node closest to an x,y coordinate"""
         
         # if the node isn't on a grid point, use the closest x,y coordinate that is on the grid
@@ -97,7 +97,7 @@ class Grid:
         return int(index)
     
     
-    def get_node(self, x, y):
+    def get_node(self, x, y) -> Node:
         """Gets the node instance closest to a given x,y coodinate"""
 
         if not (self.min_x <= x <= self.max_x and self.min_y <= y <= self.max_y):
@@ -105,7 +105,7 @@ class Grid:
         
         return self.Nodes[ int(self.get_node_index(x, y) )]
 
-    def draw(self):
+    def draw(self) -> None:
         """draws the grid with node indicies displayed in their corresponding (x, y) coordinates"""
 
         for obstacle in self.Obstacles:
@@ -119,13 +119,13 @@ class Grid:
         plt.xticks(ticks = [ x for x in np.arange(self.min_x, self.max_x + self.spacing, self.width / 5.0)])
         plt.yticks(ticks = [ y for y in np.arange(self.min_y, self.max_y + self.spacing, self.height / 5.0)])
     
-    def add_obstacle(self, obstacle: Obstacle):
+    def add_obstacle(self, obstacle: Obstacle) -> None:
         self.Obstacles.append(obstacle)
     
-    def add_obstacles(self, obstacles: list):
+    def add_obstacles(self, obstacles: list) -> None:
         self.Obstacles.extend(obstacles)
 
-    def djikstras(self, start, end):
+    def djikstras(self, start, end) -> tuple[list[float], list[float]]:
 
         start.cost = 0
 
@@ -169,7 +169,7 @@ class Grid:
             return False
 
         for obstacle in self.Obstacles:
-            if obstacle.CollidesWith(node):
+            if obstacle.collides_with(node):
                 return False
         
         return True
@@ -192,10 +192,9 @@ grid.add_obstacles([
 path = grid.djikstras( grid.get_node(0, 0), grid.get_node(8,9))
 grid.draw()
 
-for node in path:
-    x, y = path
+x, y = path
 
-    plt.plot(x, y)
+plt.plot(x, y)
 
 plt.show()
 
