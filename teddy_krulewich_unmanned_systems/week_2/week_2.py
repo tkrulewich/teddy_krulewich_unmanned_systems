@@ -179,25 +179,20 @@ class Grid:
 grid = Grid(0, 10, 0, 10, 0.5)
 
 grid.add_obstacles([
-    Obstacle(5, 5, 5), 
-    Obstacle(3, 4, 1.5),
-    Obstacle(5, 0, 1.5),
-    Obstacle(5, 1, 2.5),
+    Obstacle(5, 5, 0.5), 
+    Obstacle(3, 4, 0.5),
+    Obstacle(5, 0, 0.5),
+    Obstacle(5, 1, 0.5),
     Obstacle(0, 7, 0.5),
     Obstacle(1, 7, 0.5),
     Obstacle(2, 7, 0.5),
-    Obstacle(3, 7, 1.5)])
+    Obstacle(3, 7, 0.5)])
 
 
 path = grid.djikstras( grid.get_node(0, 0), grid.get_node(8,9))
 grid.draw()
 
 x, y = path
-
-plt.plot(x, y)
+plt.plot(x, y, color="red")
 
 plt.show()
-
-node = grid.get_node_index(8, 4.5)
-
-print(node)
