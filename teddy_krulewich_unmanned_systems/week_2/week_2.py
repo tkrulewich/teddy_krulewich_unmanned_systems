@@ -27,7 +27,7 @@ class Obstacle:
 
         self.diameter = diameter
     
-    def CollidesWith(self, node: Node):
+    def collides_with(self, node: Node):
         if (math.sqrt( (self.x - node.x)**2 + (self.y - node.y)**2) <= self.diameter / 2.0):
             return True
         
