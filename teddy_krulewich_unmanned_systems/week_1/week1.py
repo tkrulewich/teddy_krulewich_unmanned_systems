@@ -82,21 +82,17 @@ class Grid:
         """Gets the node instance closest to a given x,y coodinate"""
         return self.Nodes[ int(self.get_node_index(x, y) )]
 
-    def draw_grid_with_indicies(self):
+    def draw(self):
         """draws the grid with node indicies displayed in their corresponding (x, y) coordinates"""
 
         for node in self.Nodes:
-            plt.text(node.x, node.y, str(node.index), color="red", fontsize=8)
+            plt.text(node.x, node.y, str(node.index), color="red", fontsize=8, horizontalalignment="center", verticalalignment = "center")  
         
-        plt.xlim([0, self.width + 0.5])
-        plt.ylim([0, self.height + 0.5])
+        plt.xlim([self.min_x - self.spacing, self.max_x + self.spacing])
+        plt.ylim([self.min_y - self.spacing, self.max_y + self.spacing])
         plt.xticks(ticks = [ x for x in np.arange(self.min_x, self.max_x + self.spacing, self.width / 5.0)])
         plt.yticks(ticks = [ y for y in np.arange(self.min_y, self.max_y + self.spacing, self.height / 5.0)])
         plt.show()
 
-grid = Grid(0, 15, 0, 10, 0.5)
-#grid.draw_grid_with_indicies()
-
-node = grid.get_node_index(8, 4.5)
-
-print(node)
+grid = Grid(0, 10, 0, 10, 0.5)
+grid.draw()
