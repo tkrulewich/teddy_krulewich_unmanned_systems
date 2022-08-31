@@ -1,4 +1,7 @@
+from turtle import distance
 from matplotlib import pyplot as plt
+from matplotlib.animation import FuncAnimation
+
 import numpy as np
 
 import math
@@ -51,59 +54,18 @@ class Grid:
 
         self.spacing = spacing
 
-        self.Nodes : list[Node] = []
+        self.Nodes : dict[tuple[float, float], Node] = {}
         self.Obstacles : list[Obstacle] = []
 
         index = 0
         for y in np.arange(min_y, max_y + spacing, spacing):
             for x in np.arange(min_x, max_x + spacing, spacing):
-                self.Nodes.append(Node(x, y, None, index))
-                index += 1
-    
-    def get_node_index(self, x: float, y : float) -> int:
-        """Gets index of node closest to an x,y coordinate"""
-        
-        # if the node isn't on a grid point, use the closest x,y coordinate that is on the grid
-        if (x % self.spacing != 0 or y % self.spacing != 0):
-
-            # there are four possible closest points found by all combinations of
-            # the x and y coordinates rounded up and down
-
-            floor_x = x - x % self.spacing
-            floor_y = y - y % self.spacing
-
-            ceil_x = floor_x + self.spacing
-            ceil_y = floor_y + self.spacing
-
-            # the list of possible closest points
-            neighbors = [ (floor_x, floor_y), (ceil_x, floor_y), (floor_x, ceil_y), (ceil_x, ceil_y) ]
-
-            # find the closest
-            min_dist = math.inf
-            min_x, min_y = math.inf, math.inf
-            for x2,y2 in neighbors:
-                dist = math.sqrt( (x - x2)**2 +  (y - y2)**2 )
-                if (dist < min_dist):
-                    min_dist = dist
-                    min_x = x2
-                    min_y = y2
-            
-            # set x and y to the coordidnates of the closest point found
-            x = min_x
-            y = min_y
-        
-        # find the index of the point and return it
-        index = (y - self.min_y) / self.spacing * (self.max_x / self.spacing + 1) + x / self.spacing
-        return int(index)
-    
+                self.Nodes[(x,y)] = Node(x, y, None, index)
+                index += 1    
     
     def get_node(self, x, y) -> Node:
         """Gets the node instance closest to a given x,y coodinate"""
-
-        if not (self.min_x <= x <= self.max_x and self.min_y <= y <= self.max_y):
-            return None
-        
-        return self.Nodes[ int(self.get_node_index(x, y) )]
+        return self.Nodes[(x, y)]
 
     def draw(self) -> None:
         """draws the grid with node indicies displayed in their corresponding (x, y) coordinates"""
@@ -111,9 +73,13 @@ class Grid:
         for obstacle in self.Obstacles:
             obstacle.draw()
         
-        for node in self.Nodes:
-            plt.text(node.x, node.y, str(round(node.cost, 2)), color="red", fontsize=8, horizontalalignment="center", verticalalignment = "center")
-        
+        x_list = [node.x for node in self.Nodes.values()]
+        y_list = [node.y for node in self.Nodes.values()]
+
+
+        #plt.text(node.x, node.y, str(round(node.cost, 2)), color="red", fontsize=8, horizontalalignment="center", verticalalignment = "center")
+        plt.plot(x_list, y_list, marker = '.', linestyle='none', markersize=0.5)
+
         plt.xlim([self.min_x - self.spacing, self.max_x + self.spacing])
         plt.ylim([self.min_y - self.spacing, self.max_y + self.spacing])
         plt.xticks(ticks = [ x for x in np.arange(self.min_x, self.max_x + self.spacing, self.width / 5.0)])
@@ -121,17 +87,27 @@ class Grid:
     
     def add_obstacle(self, obstacle: Obstacle) -> None:
         self.Obstacles.append(obstacle)
-    
+
+
+
+        for y in np.arange(obstacle.y - obstacle.diameter * 2.0, obstacle.y + obstacle.diameter, self.spacing):
+            for x in np.arange(obstacle.x - obstacle.diameter * 2.0, obstacle.x + obstacle.diameter, self.spacing):
+                if (x, y) in self.Nodes:
+                    if (obstacle.collides_with(self.Nodes[(x,y)])):
+                        del self.Nodes[(x, y)]
+
     def add_obstacles(self, obstacles: list) -> None:
-        self.Obstacles.extend(obstacles)
+        for obstacle in obstacles:
+            self.add_obstacle(obstacle)
+
 
     def djikstras(self, start, end) -> tuple[list[float], list[float]]:
-
         start.cost = 0
 
         current_node : Node = start
 
-        unvisited = set(self.Nodes)
+        unvisited = set(self.Nodes.values())
+        seen = set([current_node])
         visited = set()
 
         while len(unvisited) > 0:
@@ -140,17 +116,23 @@ class Grid:
             
             for y in np.arange(current_node.y - self.spacing, current_node.y + 2 * self.spacing, self.spacing):
                 for x in np.arange(current_node.x - self.spacing, current_node.x + 2 * self.spacing, self.spacing):
-                    
-                    neighbor = self.get_node(x, y)
+                    if ((x, y) in self.Nodes):
+                        neighbor = self.Nodes[(x,y)]
 
-                    if (self.node_valid(neighbor) and neighbor is not current_node):
-                        cost = current_node.cost + current_node.distance(neighbor)
-                        if (cost < neighbor.cost):
-                            neighbor.cost = cost
-                            neighbor.parent_node = current_node
+                        if (neighbor not in visited):
+                            seen.add(neighbor)
+
+                        if (neighbor is not current_node and neighbor not in visited):
+                            cost = current_node.cost + current_node.distance(neighbor)
+                            if (cost < neighbor.cost):
+                                neighbor.cost = cost
+                                neighbor.parent_node = current_node
             
             if len(unvisited) > 0:
-                current_node = min(unvisited, key=lambda x: x.cost)
+                seen.remove(current_node)
+                if (len(seen) == 0):
+                    break
+                current_node = min(seen, key=lambda x: x.cost)
             
         x_list = []
         y_list = []
@@ -162,37 +144,46 @@ class Grid:
 
             current_node = current_node.parent_node
         
+        plt.text(start.x, start.y, str(round(start.cost, 2)), color="red", fontsize=8, horizontalalignment="center", verticalalignment = "center")
+        plt.text(end.x, end.y, str(round(end.cost, 2)), color="red", fontsize=8, horizontalalignment="center", verticalalignment = "center")
+
         return x_list, y_list
-    
-    def node_valid(self, node: Node):
-        if node is None:
-            return False
-
-        for obstacle in self.Obstacles:
-            if obstacle.collides_with(node):
-                return False
-        
-        return True
         
 
+import random
 
-grid = Grid(0, 10, 0, 10, 0.5)
+grid = Grid(0, 100, 0, 100, 0.5)
 
-grid.add_obstacles([
-    Obstacle(5, 5, 0.5), 
-    Obstacle(3, 4, 0.5),
-    Obstacle(5, 0, 0.5),
-    Obstacle(5, 1, 0.5),
-    Obstacle(0, 7, 0.5),
-    Obstacle(1, 7, 0.5),
-    Obstacle(2, 7, 0.5),
-    Obstacle(3, 7, 0.5)])
+for i in range(0, 50):
+    x = random.randint(0, 100)
+    y = random.randint(0, 100)
+
+    d = random.randint(1, 20) * 0.5
+
+    grid.add_obstacle(Obstacle(x, y, d))
 
 
-path = grid.djikstras( grid.get_node(0, 0), grid.get_node(8,9))
+start = random.choice(list(grid.Nodes.values()))
+end = random.choice(list(grid.Nodes.values()))
+ln, = plt.plot([], [], color='red')
 grid.draw()
 
-x, y = path
-plt.plot(x, y, color="red")
+path = grid.djikstras( start, end) 
 
+x, y = path
+x.reverse()
+y.reverse()
+fig = plt.figure(1)
+
+def init():
+    return ln,
+
+def update(frame):
+    ln.set_data(x[:frame], y[:frame])
+    return ln,
+
+
+
+ani = FuncAnimation(fig, update, init_func=init,frames=range(0, len(x)+1),blit=True, interval=50)
+grid.draw()
 plt.show()
