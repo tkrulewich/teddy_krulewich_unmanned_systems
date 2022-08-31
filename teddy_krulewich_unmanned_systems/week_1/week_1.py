@@ -86,7 +86,8 @@ class Grid:
         """draws the grid with node indicies displayed in their corresponding (x, y) coordinates"""
 
         for node in self.Nodes:
-            plt.text(node.x, node.y, str(node.index), color="red", fontsize=8, horizontalalignment="center", verticalalignment = "center")  
+            plt.text(node.x, node.y, str(node.index), color="red", \
+            fontsize=8, horizontalalignment="center", verticalalignment = "center")  
         
         plt.xlim([self.min_x - self.spacing, self.max_x + self.spacing])
         plt.ylim([self.min_y - self.spacing, self.max_y + self.spacing])
