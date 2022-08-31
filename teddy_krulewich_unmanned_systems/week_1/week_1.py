@@ -96,3 +96,8 @@ class Grid:
 
 grid = Grid(0, 10, 0, 10, 0.5)
 grid.draw()
+
+
+node1 = Node(2, 1, None, 0)
+node2 = Node(3, 2, None, 0)
+print(node1.distance(node2))
