@@ -177,16 +177,21 @@ function and return the Euclidean distance. Test your function by having it calc
 from (2,1) to (3,2). Make sure the answer is correct. 
 \bigskip
 \noindent Submit your Python code.
+\begin{mdframed}[backgroundcolor=bg]
 \begin{minted}{python}
 # the method below is defined within the node class
 def distance(self, other):
-    """Returns the euclidean distance from one node to another"""
-    return math.sqrt( (self.x - other.x)**2 + (self.y - other.y) ** 2 )
+    """Returns the euclidean distance between two nodes"""
+    return math.sqrt(
+        (self.x - other.x)**2 + (self.y - other.y) ** 2 )
+
 
 node1 = Node(2, 1, None, 0)
 node2 = Node(3, 2, None, 0)
+
 print(node1.distance(node2))
 \end{minted}
+\end{mdframed}
 
 \noindent\rule{\textwidth}{0.4pt}\\
 \textbf{Output: 1.4142135623730951}
