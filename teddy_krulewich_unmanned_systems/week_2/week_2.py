@@ -55,12 +55,17 @@ class Grid:
         self.spacing = spacing
 
         self.Nodes : dict[tuple[float, float], Node] = {}
+        self.ValidNodes : set[Node] = set()
+
         self.Obstacles : list[Obstacle] = []
 
         index = 0
         for y in np.arange(min_y, max_y + spacing, spacing):
             for x in np.arange(min_x, max_x + spacing, spacing):
-                self.Nodes[(x,y)] = Node(x, y, None, index)
+                node = Node(x, y, None, index)
+                self.Nodes[(x,y)] = node
+                
+                self.ValidNodes.add(node)
                 index += 1    
     
     def get_node(self, x, y) -> Node:
@@ -73,12 +78,19 @@ class Grid:
         for obstacle in self.Obstacles:
             obstacle.draw()
         
-        x_list = [node.x for node in self.Nodes.values()]
-        y_list = [node.y for node in self.Nodes.values()]
-
+        x_list = [node.x for node in self.ValidNodes if math.isfinite(node.cost)]
+        y_list = [node.y for node in self.ValidNodes if math.isfinite(node.cost)]
 
         #plt.text(node.x, node.y, str(round(node.cost, 2)), color="red", fontsize=8, horizontalalignment="center", verticalalignment = "center")
-        plt.plot(x_list, y_list, marker = '.', linestyle='none', markersize=0.5)
+        plt.plot(x_list, y_list, marker = '.', linestyle='none', color='blue', markersize=0.25)
+
+        x_list2 = [node.x for node in self.ValidNodes if math.isinf(node.cost)]
+        y_list2 = [node.y for node in self.ValidNodes if math.isinf(node.cost)]
+
+        #plt.text(node.x, node.y, str(round(node.cost, 2)), color="red", fontsize=8, horizontalalignment="center", verticalalignment = "center")
+        plt.plot(x_list2, y_list2, marker = '.', linestyle='none', color='red', markersize=1)
+
+
 
         plt.xlim([self.min_x - self.spacing, self.max_x + self.spacing])
         plt.ylim([self.min_y - self.spacing, self.max_y + self.spacing])
@@ -93,8 +105,9 @@ class Grid:
         for y in np.arange(obstacle.y - obstacle.diameter * 2.0, obstacle.y + obstacle.diameter, self.spacing):
             for x in np.arange(obstacle.x - obstacle.diameter * 2.0, obstacle.x + obstacle.diameter, self.spacing):
                 if (x, y) in self.Nodes:
-                    if (obstacle.collides_with(self.Nodes[(x,y)])):
-                        del self.Nodes[(x, y)]
+                    node = self.Nodes[(x, y)]
+                    if (node in self.ValidNodes and obstacle.collides_with(node)):
+                        self.ValidNodes.remove(node)
 
     def add_obstacles(self, obstacles: list) -> None:
         for obstacle in obstacles:
@@ -119,10 +132,9 @@ class Grid:
                     if ((x, y) in self.Nodes):
                         neighbor = self.Nodes[(x,y)]
 
-                        if (neighbor not in visited):
+                        if (neighbor is not current_node and neighbor not in visited and neighbor in self.ValidNodes):
                             seen.add(neighbor)
 
-                        if (neighbor is not current_node and neighbor not in visited):
                             cost = current_node.cost + current_node.distance(neighbor)
                             if (cost < neighbor.cost):
                                 neighbor.cost = cost
@@ -154,7 +166,7 @@ import random
 
 grid = Grid(0, 100, 0, 100, 0.5)
 
-for i in range(0, 50):
+for i in range(0, 300):
     x = random.randint(0, 100)
     y = random.randint(0, 100)
 
@@ -163,10 +175,9 @@ for i in range(0, 50):
     grid.add_obstacle(Obstacle(x, y, d))
 
 
-start = random.choice(list(grid.Nodes.values()))
-end = random.choice(list(grid.Nodes.values()))
+start = random.choice(list(grid.ValidNodes))
+end = random.choice(list(grid.ValidNodes))
 ln, = plt.plot([], [], color='red')
-grid.draw()
 
 path = grid.djikstras( start, end) 
 
