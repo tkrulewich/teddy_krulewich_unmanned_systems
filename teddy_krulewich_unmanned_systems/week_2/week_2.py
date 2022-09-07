@@ -23,34 +23,55 @@ class Node:
         return self.cost < other.cost
 
 
+class BoundingBox:
+    def __init__(self, min_x, max_x, min_y, max_y):
+        self.min_x = min_x
+        self.max_x = max_x
+        self.min_y = min_y
+        self.max_y = max_y
+
+        self.width = max_x - min_x
+        self.height = max_y - min_y
+
+        self.shrink_factor = 0
+
+    def contains_node(self, node) -> bool:
+        return (self.min_x + self.shrink_factor <= node.x <= self.max_x  - self.shrink_factor
+            and self.min_y  + self.shrink_factor <= node.y <= self.max_y - self.shrink_factor)
+    
+    def shrink_bounds(self, factor):
+        self.shrink_factor = factor
+
 class Obstacle:
     def __init__(self, x: float, y: float, radius: float):
         self.x = x
         self.y = y
 
         self.radius = radius
+        self.inflation_radius = 0
     
     def collides_with(self, node: Node) -> bool:
-        if (math.sqrt( (self.x - node.x)**2 + (self.y - node.y)**2) <= self.radius):
+        if (math.sqrt( (self.x - node.x)**2 + (self.y - node.y)**2) < self.radius + self.inflation_radius):
             return True
         
         return False
+
+    def inflate(self, inflation_radius):
+        self.inflation_radius = inflation_radius
     
+    def get_bounding_box(self) -> BoundingBox:
+        return BoundingBox(self.x - self.radius - self.inflation_radius, self.x + self.radius + self.inflation_radius,
+            self.y - self.radius - self.inflation_radius, self.y + self.radius + self.inflation_radius)
+
     def draw(self) -> None:
-        circle = plt.Circle( (self.x, self.y), self.radius, color='blue')
-        plt.gca().add_patch(circle)
+        obstacle_circle = plt.Circle( (self.x, self.y), self.radius, color='blue')
+        inflated_circle = plt.Circle( (self.x, self.y), self.radius + self.inflation_radius, color='red', alpha=0.5)
+        plt.gca().add_patch(obstacle_circle)
+        plt.gca().add_patch(inflated_circle)
 
 class Grid:
     def __init__(self, min_x : float, max_x : float, min_y : float, max_y : float, spacing : float):
-        self.min_x = min_x
-        self.max_x = max_x
-
-        self.min_y = min_y
-        self.max_y = max_y
-
-
-        self.width = max_x - min_x
-        self.height = max_y - min_y
+        self.bounds = BoundingBox(min_x, max_x, min_y, max_y)
 
         self.spacing = spacing
 
@@ -58,6 +79,8 @@ class Grid:
         self.valid_nodes : set[Node] = set()
 
         self.obstacles : list[Obstacle] = []
+
+        self.inflation_radius = 0
 
         index = 0
         for y in np.arange(min_y, max_y + spacing, spacing):
@@ -78,8 +101,8 @@ class Grid:
         for obstacle in self.obstacles:
             obstacle.draw()
         
-        x_list = [node.x for node in self.valid_nodes if math.isfinite(node.cost)]
-        y_list = [node.y for node in self.valid_nodes if math.isfinite(node.cost)]
+        x_list = [node.x for node in self.valid_nodes if math.isfinite(node.cost) and self.node_valid(node)]
+        y_list = [node.y for node in self.valid_nodes if math.isfinite(node.cost) and self.node_valid(node)]
 
         #plt.text(node.x, node.y, str(round(node.cost, 2)), color="red", fontsize=8, horizontalalignment="center", verticalalignment = "center")
         plt.plot(x_list, y_list, marker = '.', linestyle='none', color='blue', markersize=0.25)
@@ -92,31 +115,45 @@ class Grid:
 
 
 
-        plt.xlim([self.min_x - self.spacing, self.max_x + self.spacing])
-        plt.ylim([self.min_y - self.spacing, self.max_y + self.spacing])
-        plt.xticks(ticks = [ x for x in np.arange(self.min_x, self.max_x + self.spacing, self.width / 5.0)])
-        plt.yticks(ticks = [ y for y in np.arange(self.min_y, self.max_y + self.spacing, self.height / 5.0)])
+        plt.xlim([self.bounds.min_x - self.spacing, self.bounds.max_x + self.spacing])
+        plt.ylim([self.bounds.min_y - self.spacing, self.bounds.max_y + self.spacing])
+        plt.xticks(ticks = [ x for x in np.arange(self.bounds.min_x, self.bounds.max_x + self.spacing, self.bounds.width / 5.0)])
+        plt.yticks(ticks = [ y for y in np.arange(self.bounds.min_y, self.bounds.max_y + self.spacing, self.bounds.height / 5.0)])
     
     def add_obstacle(self, obstacle: Obstacle) -> None:
         self.obstacles.append(obstacle)
+        self.invalidate_neighboring_nodes(obstacle)
 
-
+    def invalidate_neighboring_nodes(self, obstacle: Obstacle):
+        bounds = obstacle.get_bounding_box()
         # remove nodes from c-space that collide with object
-        obs_x =  self.spacing * round(obstacle.x / self.spacing)
-        obs_y =  self.spacing * round(obstacle.y / self.spacing)
-        obs_r = self.spacing * round(obstacle.radius / self.spacing) + self.spacing;
+        bounds.min_x = self.spacing * math.floor(bounds.min_x / self.spacing)
+        bounds.max_x = self.spacing * math.ceil(bounds.max_x / self.spacing)
 
-        for y in np.arange(obs_y - obs_r, obs_y + obs_r, self.spacing):
-            for x in np.arange(obs_x - obs_r, obs_x + obs_r, self.spacing):
+        bounds.min_y = self.spacing * math.floor(bounds.min_y / self.spacing)
+        bounds.max_y = self.spacing * math.ceil(bounds.max_y / self.spacing)
+
+        for y in np.arange(bounds.min_y, bounds.max_y + self.spacing, self.spacing):
+            for x in np.arange(bounds.min_x, bounds.max_x + self.spacing, self.spacing):
                 if (x, y) in self.nodes:
-                    node = self.nodes[(x, y)]
-                    if (node in self.valid_nodes and obstacle.collides_with(node)):
+                    node = self.get_node(x, y)
+                    if node in self.valid_nodes and obstacle.collides_with(node):
                         self.valid_nodes.remove(node)
 
     def add_obstacles(self, obstacles: list) -> None:
         for obstacle in obstacles:
             self.add_obstacle(obstacle)
 
+    def inflate(self, inflation_radius: float) -> None:
+        self.inflation_radius = inflation_radius
+        self.bounds.shrink_bounds(inflation_radius)
+        
+        for obstacle in self.obstacles:
+            obstacle.inflate(inflation_radius)
+            self.invalidate_neighboring_nodes(obstacle)
+    
+    def node_valid(self, node: Node) -> bool:
+        return node in self.valid_nodes and self.bounds.contains_node(node) 
 
     def dijkstras(self, start, end) -> tuple[list[float], list[float]]:
         start.cost = 0
@@ -136,7 +173,7 @@ class Grid:
                     if ((x, y) in self.nodes):
                         neighbor = self.nodes[(x,y)]
 
-                        if (neighbor is not current_node and neighbor not in visited and neighbor in self.valid_nodes):
+                        if (neighbor is not current_node and neighbor not in visited and self.node_valid(neighbor)):
                             seen.add(neighbor)
 
                             cost = current_node.cost + current_node.distance(neighbor)
@@ -167,23 +204,26 @@ class Grid:
 
 grid = Grid(0, 10, 0, 10, 0.5)
 
+
 grid.add_obstacles([
-    Obstacle(1,1, 0.25),
-    Obstacle(4,4, 0.25),
-    Obstacle(3,4, 0.25),
-    Obstacle(5,0, 0.25),
-    Obstacle(5,1, 0.25),
-    Obstacle(0,7, 0.25),
-    Obstacle(1,7, 0.25),
-    Obstacle(2,7, 0.25),
-    Obstacle(3,7, 0.25)
+    Obstacle(0,0, 0.5),
+    Obstacle(4,4, 0.5),
+    Obstacle(3,4, 0.5),
+    Obstacle(5,0, 0.5),
+    Obstacle(5,1, 0.5),
+    Obstacle(0,7, 0.5),
+    Obstacle(1,7, 0.5),
+    Obstacle(2,7, 0.5),
+    Obstacle(3,7, 0.5)
 ])
 
+
+grid.inflate(0.5)
 
 fig = plt.figure(1)
 
 
-start = grid.nodes[(0,0)]
+start = grid.nodes[(2,2)]
 end = grid.nodes[(8, 9)]
 
 path = grid.dijkstras(start, end) 
