@@ -80,9 +80,10 @@ class Obstacle:
     def draw(self) -> None:
         """Draws the obstacle to the screen with a transparent circle for the infalted radius"""
         obstacle_circle = plt.Circle( (self.x, self.y), self.radius, color='blue')
-        inflated_circle = plt.Circle( (self.x, self.y), self.radius + self.inflation_radius, color='red', alpha=0.5)
         plt.gca().add_patch(obstacle_circle)
-        plt.gca().add_patch(inflated_circle)
+        if (self.inflation_radius > 0):
+            inflated_circle = plt.Circle( (self.x, self.y), self.radius + self.inflation_radius, color='red', alpha=0.5)
+            plt.gca().add_patch(inflated_circle)
 
 class Grid:
     def __init__(self, min_x : float, max_x : float, min_y : float, max_y : float, spacing : float):
@@ -250,17 +251,16 @@ grid = Grid(0, 10, 0, 10, 0.5)
 
 
 grid.add_obstacles([
-    Obstacle(0,0, 0.5),
-    Obstacle(4,4, 0.5),
-    Obstacle(3,4, 0.5),
-    Obstacle(5,0, 0.5),
-    Obstacle(5,1, 0.5),
-    Obstacle(0,7, 0.5),
-    Obstacle(1,7, 0.5),
-    Obstacle(2,7, 0.5),
-    Obstacle(3,7, 0.5)
+    Obstacle(1,1, 0.25),
+    Obstacle(4,4, 0.25),
+    Obstacle(3,4, 0.25),
+    Obstacle(5,0, 0.25),
+    Obstacle(5,1, 0.25),
+    Obstacle(0,7, 0.25),
+    Obstacle(1,7, 0.25),
+    Obstacle(2,7, 0.25),
+    Obstacle(3,7, 0.25)
 ])
-
 
 grid.inflate(0.5)
 
