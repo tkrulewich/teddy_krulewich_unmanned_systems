@@ -13,4 +13,22 @@
 
 \begin{document}
 \maketitle
+
+
+\section*{Problem 1}
+
+Create a function that checks if the current node is valid based upon the list of obstacles, grid 
+boundaries, and current location. 
+Using an obstacle list of (1,1), (4,4), (3,4), (5,0), (5,1), (0,7), (1,7), (2,7), and (3,7); and a bounding box 
+of 0 to 10 for both x and y, and step size of 0.5, verify that the location (2,2) is valid. Assume the 
+obstacles have a diameter of 0.5 (only occupy the node at which they reside).
+Pass the obstacle list, node, and map boundaries/step size, and return a Boolean True/False 
+depending on if the node location is valid (reachable).
+Submit your Python code
+
+
+I chose to invalid nodes in c-space when they are added to the grid using a bounding box system.
+This is more efficient as we dont have to check the entire space for invalid nodes and adding obstacles
+doesnt path finding time. The code is below:
+
 \end{document}
