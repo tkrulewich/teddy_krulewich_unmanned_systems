@@ -71,12 +71,14 @@ class Obstacle:
     
 
     def get_bounding_box(self) -> BoundingBox:
+        """Returns a bounding box that contains the obstacle including its inflation radius"""
         bounds = BoundingBox(self.x - self.radius, self.x + self.radius, self.y - self.radius, self.y + self.radius)
         bounds.inflate(self.inflation_radius)
 
         return bounds
 
     def draw(self) -> None:
+        """Draws the obstacle to the screen with a transparent circle for the infalted radius"""
         obstacle_circle = plt.Circle( (self.x, self.y), self.radius, color='blue')
         inflated_circle = plt.Circle( (self.x, self.y), self.radius + self.inflation_radius, color='red', alpha=0.5)
         plt.gca().add_patch(obstacle_circle)
