@@ -24,20 +24,20 @@ class Node:
 
 
 class Obstacle:
-    def __init__(self, x: float, y: float, diameter: float):
+    def __init__(self, x: float, y: float, radius: float):
         self.x = x
         self.y = y
 
-        self.diameter = diameter
+        self.radius = radius
     
     def collides_with(self, node: Node) -> bool:
-        if (math.sqrt( (self.x - node.x)**2 + (self.y - node.y)**2) <= self.diameter / 2.0):
+        if (math.sqrt( (self.x - node.x)**2 + (self.y - node.y)**2) <= self.radius):
             return True
         
         return False
     
     def draw(self) -> None:
-        circle = plt.Circle( (self.x, self.y), self.diameter / 2.0, color='blue')
+        circle = plt.Circle( (self.x, self.y), self.radius, color='blue')
         plt.gca().add_patch(circle)
 
 class Grid:
@@ -54,38 +54,38 @@ class Grid:
 
         self.spacing = spacing
 
-        self.Nodes : dict[tuple[float, float], Node] = {}
-        self.ValidNodes : set[Node] = set()
+        self.nodes : dict[tuple[float, float], Node] = {}
+        self.valid_nodes : set[Node] = set()
 
-        self.Obstacles : list[Obstacle] = []
+        self.obstacles : list[Obstacle] = []
 
         index = 0
         for y in np.arange(min_y, max_y + spacing, spacing):
             for x in np.arange(min_x, max_x + spacing, spacing):
                 node = Node(x, y, None, index)
-                self.Nodes[(x,y)] = node
+                self.nodes[(x,y)] = node
                 
-                self.ValidNodes.add(node)
+                self.valid_nodes.add(node)
                 index += 1    
     
     def get_node(self, x, y) -> Node:
         """Gets the node instance closest to a given x,y coodinate"""
-        return self.Nodes[(x, y)]
+        return self.nodes[(x, y)]
 
     def draw(self) -> None:
         """draws the grid with node indicies displayed in their corresponding (x, y) coordinates"""
 
-        for obstacle in self.Obstacles:
+        for obstacle in self.obstacles:
             obstacle.draw()
         
-        x_list = [node.x for node in self.ValidNodes if math.isfinite(node.cost)]
-        y_list = [node.y for node in self.ValidNodes if math.isfinite(node.cost)]
+        x_list = [node.x for node in self.valid_nodes if math.isfinite(node.cost)]
+        y_list = [node.y for node in self.valid_nodes if math.isfinite(node.cost)]
 
         #plt.text(node.x, node.y, str(round(node.cost, 2)), color="red", fontsize=8, horizontalalignment="center", verticalalignment = "center")
         plt.plot(x_list, y_list, marker = '.', linestyle='none', color='blue', markersize=0.25)
 
-        x_list2 = [node.x for node in self.ValidNodes if math.isinf(node.cost)]
-        y_list2 = [node.y for node in self.ValidNodes if math.isinf(node.cost)]
+        x_list2 = [node.x for node in self.valid_nodes if math.isinf(node.cost)]
+        y_list2 = [node.y for node in self.valid_nodes if math.isinf(node.cost)]
 
         #plt.text(node.x, node.y, str(round(node.cost, 2)), color="red", fontsize=8, horizontalalignment="center", verticalalignment = "center")
         plt.plot(x_list2, y_list2, marker = '.', linestyle='none', color='red', markersize=1)
@@ -98,28 +98,32 @@ class Grid:
         plt.yticks(ticks = [ y for y in np.arange(self.min_y, self.max_y + self.spacing, self.height / 5.0)])
     
     def add_obstacle(self, obstacle: Obstacle) -> None:
-        self.Obstacles.append(obstacle)
+        self.obstacles.append(obstacle)
 
 
+        # remove nodes from c-space that collide with object
+        obs_x =  self.spacing * round(obstacle.x / self.spacing)
+        obs_y =  self.spacing * round(obstacle.y / self.spacing)
+        obs_r = self.spacing * round(obstacle.radius / self.spacing) + self.spacing;
 
-        for y in np.arange(obstacle.y - obstacle.diameter * 2.0, obstacle.y + obstacle.diameter, self.spacing):
-            for x in np.arange(obstacle.x - obstacle.diameter * 2.0, obstacle.x + obstacle.diameter, self.spacing):
-                if (x, y) in self.Nodes:
-                    node = self.Nodes[(x, y)]
-                    if (node in self.ValidNodes and obstacle.collides_with(node)):
-                        self.ValidNodes.remove(node)
+        for y in np.arange(obs_y - obs_r, obs_y + obs_r, self.spacing):
+            for x in np.arange(obs_x - obs_r, obs_x + obs_r, self.spacing):
+                if (x, y) in self.nodes:
+                    node = self.nodes[(x, y)]
+                    if (node in self.valid_nodes and obstacle.collides_with(node)):
+                        self.valid_nodes.remove(node)
 
     def add_obstacles(self, obstacles: list) -> None:
         for obstacle in obstacles:
             self.add_obstacle(obstacle)
 
 
-    def djikstras(self, start, end) -> tuple[list[float], list[float]]:
+    def dijkstras(self, start, end) -> tuple[list[float], list[float]]:
         start.cost = 0
 
         current_node : Node = start
 
-        unvisited = set(self.Nodes.values())
+        unvisited = set(self.nodes.values())
         seen = set([current_node])
         visited = set()
 
@@ -129,10 +133,10 @@ class Grid:
             
             for y in np.arange(current_node.y - self.spacing, current_node.y + 2 * self.spacing, self.spacing):
                 for x in np.arange(current_node.x - self.spacing, current_node.x + 2 * self.spacing, self.spacing):
-                    if ((x, y) in self.Nodes):
-                        neighbor = self.Nodes[(x,y)]
+                    if ((x, y) in self.nodes):
+                        neighbor = self.nodes[(x,y)]
 
-                        if (neighbor is not current_node and neighbor not in visited and neighbor in self.ValidNodes):
+                        if (neighbor is not current_node and neighbor not in visited and neighbor in self.valid_nodes):
                             seen.add(neighbor)
 
                             cost = current_node.cost + current_node.distance(neighbor)
@@ -160,41 +164,42 @@ class Grid:
         plt.text(end.x, end.y, str(round(end.cost, 2)), color="red", fontsize=8, horizontalalignment="center", verticalalignment = "center")
 
         return x_list, y_list
-        
 
-import random
+grid = Grid(0, 10, 0, 10, 0.5)
 
-grid = Grid(0, 100, 0, 100, 0.5)
+grid.add_obstacles([
+    Obstacle(1,1, 0.25),
+    Obstacle(4,4, 0.25),
+    Obstacle(3,4, 0.25),
+    Obstacle(5,0, 0.25),
+    Obstacle(5,1, 0.25),
+    Obstacle(0,7, 0.25),
+    Obstacle(1,7, 0.25),
+    Obstacle(2,7, 0.25),
+    Obstacle(3,7, 0.25)
+])
 
-for i in range(0, 300):
-    x = random.randint(0, 100)
-    y = random.randint(0, 100)
 
-    d = random.randint(1, 20) * 0.5
-
-    grid.add_obstacle(Obstacle(x, y, d))
+fig = plt.figure(1)
 
 
-start = random.choice(list(grid.ValidNodes))
-end = random.choice(list(grid.ValidNodes))
-ln, = plt.plot([], [], color='red')
+start = grid.nodes[(0,0)]
+end = grid.nodes[(8, 9)]
 
-path = grid.djikstras( start, end) 
+path = grid.dijkstras(start, end) 
 
 x, y = path
 x.reverse()
 y.reverse()
-fig = plt.figure(1)
 
-def init():
-    return ln,
+path_line, = plt.plot(x, y, color='red')
 
-def update(frame):
-    ln.set_data(x[:frame], y[:frame])
-    return ln,
+# def update(frame):
+#     path_line.set_data(x[:frame], y[:frame])
+#     return path_line,
+
+# anim = FuncAnimation(fig, update, frames=range(0, len(x)+1),blit=True, interval=50)
 
 
-
-ani = FuncAnimation(fig, update, init_func=init,frames=range(0, len(x)+1),blit=True, interval=50)
 grid.draw()
 plt.show()
