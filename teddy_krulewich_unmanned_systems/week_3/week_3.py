@@ -1,10 +1,13 @@
+from fileinput import close
+from functools import reduce
+from queue import PriorityQueue
 from turtle import distance
 from matplotlib import pyplot as plt
 from matplotlib.animation import FuncAnimation
 
 import numpy as np
-
 import math
+import random
 
 class Node:
     def __init__(self, x: float, y: float, parent_node, index : int):
@@ -111,6 +114,24 @@ class Grid:
     
     def get_node(self, x, y) -> Node:
         """Gets the node instance closest to a given x,y coodinate"""
+
+        if (x,y) in self.nodes:
+            return self.nodes[(x,y)]
+        
+
+        x = round(x / self.spacing) * self.spacing
+        y = round(y / self.spacing) * self.spacing
+
+        if (x < self.bounds.min_x):
+            x = self.bounds.min_x
+        elif (x > self.bounds.max_x):
+            x = self.bounds.max_x
+
+        if (y < self.bounds.min_y):
+            y = self.bounds.min_y
+        elif (y > self.bounds.max_y):
+            y = self.bounds.max_y
+
         return self.nodes[(x, y)]
 
     def draw(self) -> None:
@@ -199,17 +220,22 @@ class Grid:
         """Finds the shortest path on a grid using A* algorithm"""
         start.cost = 0
 
-        current_node : Node = start
+        reduced = PriorityQueue()
+        reduced.put((0, start))
 
         unvisited = set(self.nodes.values())
-        # to reduce search space we only consider nodes that we have "seen" before
-        seen = set([current_node])
+        current_node : Node = start
+
         visited = set()
 
         # loop through unvisited nodes
-        while len(unvisited) > 0 and current_node != end:
+        while not reduced.empty() and current_node != end:
+            current_node = reduced.get()[1]
+
+            if (current_node in visited):
+                continue
+
             current_node.visited = True
-            unvisited.remove(current_node)
             visited.add(current_node)
             
             # get the possible neighbors of the current node
@@ -221,22 +247,13 @@ class Grid:
                         neighbor.heruistic = neighbor.distance(end)
                         # if the neighbor is valid and it is not our current node
                         if (neighbor is not current_node and neighbor not in visited and self.node_valid(neighbor)):
-                            # add it to the list of seen nodes
-                            seen.add(neighbor)
-
                             # update the cost if its less than previous cost
                             cost = current_node.cost + current_node.distance(neighbor)
                             if (cost < neighbor.cost):
+                                reduced.put((cost + neighbor.heruistic, neighbor))
                                 neighbor.cost = cost
                                 neighbor.parent_node = current_node
                                 
-            # if there are more unvisited nodes visit the next one with lowest cost
-            if len(unvisited) > 0:
-                seen.remove(current_node)
-                if (len(seen) == 0):
-                    break
-                current_node = min(seen, key=lambda x: x.cost + x.heruistic)
-                # will store x and y coordinates of nodes in path
         x_list = []
         y_list = []
 
@@ -254,20 +271,116 @@ class Grid:
 
         return x_list, y_list
     
+    def get_neighbors(self, node: Node) -> list[Node]:
+        """Returns a list of neighboring nodes"""
+        neighbors = []
+        for y in np.arange(node.y - self.spacing, node.y + 2 * self.spacing, self.spacing):
+            for x in np.arange(node.x - self.spacing, node.x + 2 * self.spacing, self.spacing):
+                if ((x, y) in self.nodes):
+                    neighbor = self.nodes[(x,y)]
+                    if (neighbor is not node and self.node_valid(neighbor)):
+                        neighbors.append(neighbor)
+        return neighbors
+    
+    def RRT(self, start: Node, end: Node) -> tuple[list[float], list[float]]:
+        start.cost = 0
+        visited_tree = [start]
+        """Finds the shortest path using RRT algorithm"""
+
+        iterations = 0
+        while iterations < 10000:
+            iterations += 1
+            random_node = random.choice(list(self.valid_nodes))
+
+            closest_node = min(visited_tree, key=lambda x: x.distance(random_node))
+
+            # get the angle between the closest node and the random node
+            angle = math.atan2(random_node.y - closest_node.y, random_node.x - closest_node.x)
+            
+            new_x = closest_node.x + self.spacing * math.cos(angle)
+            new_y = closest_node.y + self.spacing * math.sin(angle)
+
+            new_node = self.get_node(new_x, new_y)
+
+            if (not self.node_valid(new_node)):
+                continue
+
+            if (new_node in visited_tree):
+                continue
+
+            new_node.parent_node = closest_node
+            new_node.cost = closest_node.cost + closest_node.distance(new_node)
+            visited_tree.append(new_node)
+
+            closest_node.visited = True
+
+            # for neighbor in self.get_neighbors(new_node):
+            #     if new_node.cost + neighbor.distance(new_node) < neighbor.cost:
+            #         neighbor.cost = new_node.cost + neighbor.distance(new_node)
+            #         neighbor.parent_node = new_node
+            #         visited_tree.append(neighbor)
+
+            if new_node == end or end in self.get_neighbors(new_node):
+                end.parent_node = new_node
+                end.cost = new_node.cost + new_node.distance(end)
+                break
+        
+        # x_list = []
+        # y_list = []
+
+        # seen = set()
+
+        # for node in visited_tree:
+        #     while (node.parent_node is not None and node not in seen):
+        #         seen.add(node)
+        #         x_list.append(node.x)
+        #         x_list.append(node.parent_node.x)
+        #         y_list.append(node.y)
+        #         y_list.append(node.parent_node.y)
+
+        #         node = node.parent_node
+        #     else:
+        #         plt.plot(x_list, y_list, color="green", linewidth=0.5)
+        #         x_list = []
+        #         y_list = []
+        
+        # will store x and y coordinates of nodes in path
+        x_list = []
+        y_list = []
+
+        # start from the end node and work backwars to the start node
+        current_node = min(visited_tree, key=lambda x: x.distance(end))
+        while current_node != None:
+            x_list.append(current_node.x)
+            y_list.append(current_node.y)
+
+            current_node = current_node.parent_node
+        
+        # plot cost of start and end
+        plt.text(start.x, start.y, str(round(start.cost, 2)), color="red", fontsize=8, horizontalalignment="center", verticalalignment = "center")
+        plt.text(end.x, end.y, str(round(end.cost, 2)), color="red", fontsize=8, horizontalalignment="center", verticalalignment = "center")
+
+        return x_list, y_list
+    
     def dijkstras(self, start, end) -> tuple[list[float], list[float]]:
         """Finds the shortest path on a grid using Dijkstra's algorithm"""
+
+        reduced_nodes = PriorityQueue()
+        reduced_nodes.put((0, start))
         start.cost = 0
 
         current_node : Node = start
 
         unvisited = set(self.nodes.values())
         # to reduce search space we only consider nodes that we have "seen" before
-        seen = set([current_node])
         visited = set()
 
         # loop through unvisited nodes
-        while len(unvisited) > 0:
-            unvisited.remove(current_node)
+        while not reduced_nodes.empty():
+            current_node = reduced_nodes.get()[1]
+            if current_node in visited:
+                continue
+
             visited.add(current_node)
             
             # get the possible neighbors of the current node
@@ -278,21 +391,14 @@ class Grid:
                         neighbor = self.nodes[(x,y)]
                         # if the neighbor is valid and it is not our current node
                         if (neighbor is not current_node and neighbor not in visited and self.node_valid(neighbor)):
-                            # add it to the list of seen nodes
-                            seen.add(neighbor)
 
                             # update the cost if its less than previous cost
                             cost = current_node.cost + current_node.distance(neighbor)
                             if (cost < neighbor.cost):
                                 neighbor.cost = cost
                                 neighbor.parent_node = current_node
-                                
-            # if there are more unvisited nodes visit the next one with lowest cost
-            if len(unvisited) > 0:
-                seen.remove(current_node)
-                if (len(seen) == 0):
-                    break
-                current_node = min(seen, key=lambda x: x.cost)
+
+                                reduced_nodes.put((neighbor.cost, neighbor))
             
         
         # will store x and y coordinates of nodes in path
@@ -317,10 +423,7 @@ class Grid:
 
 grid = Grid(0, 50, 0, 50, 0.5)
 
-import random
-import numpy
-
-obstacle_data = numpy.genfromtxt("biggrids.csv", delimiter=",")
+obstacle_data = np.genfromtxt("biggrids.csv", delimiter=",")
 for obstacle in obstacle_data:
     grid.add_obstacle(Obstacle(obstacle[0], obstacle[1], 0.25))
 
@@ -329,8 +432,8 @@ for obstacle in obstacle_data:
 fig = plt.figure(1)
 
 
-start = grid.nodes[(0,0)]
-end = grid.nodes[(50, 50)]
+start = grid.nodes[(49,0.5)]
+end = grid.nodes[(0.5, 49)]
 
 from time import time
 t0 = time()
