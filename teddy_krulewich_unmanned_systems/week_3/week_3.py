@@ -325,24 +325,24 @@ class Grid:
                 end.cost = new_node.cost + new_node.distance(end)
                 break
         
-        # x_list = []
-        # y_list = []
+        tree_lines = []
 
-        # seen = set()
+        seen = set()
 
-        # for node in visited_tree:
-        #     while (node.parent_node is not None and node not in seen):
-        #         seen.add(node)
-        #         x_list.append(node.x)
-        #         x_list.append(node.parent_node.x)
-        #         y_list.append(node.y)
-        #         y_list.append(node.parent_node.y)
+        for node in visited_tree:
+            x_list = []
+            y_list = []
+            while (node.parent_node is not None and node not in seen):
+                seen.add(node)
+                x_list.append(node.x)
+                x_list.append(node.parent_node.x)
+                y_list.append(node.y)
+                y_list.append(node.parent_node.y)
 
-        #         node = node.parent_node
-        #     else:
-        #         plt.plot(x_list, y_list, color="green", linewidth=0.5)
-        #         x_list = []
-        #         y_list = []
+                node = node.parent_node
+            else:
+                plt.plot(x_list, y_list, color="green", linewidth=0.5)
+                tree_lines.append((x_list, y_list))
         
         # will store x and y coordinates of nodes in path
         x_list = []
@@ -360,7 +360,7 @@ class Grid:
         plt.text(start.x, start.y, str(round(start.cost, 2)), color="red", fontsize=8, horizontalalignment="center", verticalalignment = "center")
         plt.text(end.x, end.y, str(round(end.cost, 2)), color="red", fontsize=8, horizontalalignment="center", verticalalignment = "center")
 
-        return x_list, y_list
+        return x_list, y_list, tree_lines
     
     def dijkstras(self, start, end) -> tuple[list[float], list[float]]:
         """Finds the shortest path on a grid using Dijkstra's algorithm"""
@@ -438,12 +438,11 @@ end = grid.nodes[(0.5, 49)]
 from time import time
 t0 = time()
 
-path = grid.dijkstras(start, end) 
+x, y = grid.a_star(start, end) 
 
 t1 = time()
 
 print("Time: ", t1 - t0)
-x, y = path
 x.reverse()
 y.reverse()
 
@@ -457,4 +456,13 @@ anim = FuncAnimation(fig, update, frames=range(0, len(x)+1),blit=True, interval=
 
 
 grid.draw()
+
+
+# fig2 = plt.figure(2)
+
+# for line in tree_lines:
+#     plt.plot(line[0], line[1], color="green", linewidth=0.5)
+
+#plt.plot(x, y, color='red')
+
 plt.show()
