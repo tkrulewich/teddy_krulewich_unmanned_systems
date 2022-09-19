@@ -31,14 +31,26 @@ def euler_from_quaternion(x:float, y:float, z:float, w:float) -> tuple:
         return roll_x, pitch_y, yaw_z # in radians
 
 
-class TurtleBotController(Node):
-    class MoveCommand:
-        def __init__(self, linear, angular, duration):
-            self.twist = Twist()
-            self.twist.linear.x = linear
-            self.twist.angular.z = angular
-            self.duration = duration
+class PID:
+    def __init__(self, kp, ki, kd):
+        self.kp = kp
+        self.ki = ki
+        self.kd = kd
 
+        self.last_error = 0
+        self.integral = 0
+
+        self.output = 0
+
+    def update(self, error, dt):
+        self.integral += error * dt
+        derivative = (error - self.last_error) / dt
+
+        self.output = self.kp * error + self.ki * self.integral + self.kd * derivative
+
+        self.last_error = error
+
+class TurtleBotController(Node):
     def __init__(self):
         super().__init__('turtlebot_controller')
 
@@ -48,12 +60,21 @@ class TurtleBotController(Node):
         self.timer = self.create_timer(timer_period, self.timer_callback)
         self.odom_subscriber = self.create_subscription(Odometry, 'odom', self.odom_callback, 10)
 
-        self.move_commands = []
+
         self.start_time = self.get_clock().now().nanoseconds
-        self.time_command_started = self.start_time
         self.done = False
 
         self.state_records = { 'cmd_vel_linear': [], 'cmd_vel_angular': [], 'x': [], 'y': [], 'theta': [] }
+
+        self.desired_theta = None
+        self.desired_x = None
+        self.desired_y = None
+
+        self.current_theta = None
+        self.current_x = None
+        self.current_y = None
+
+        self.theta_controller = PID(0.5, 0.0, 0.0)
 
 
     
@@ -61,40 +82,56 @@ class TurtleBotController(Node):
         self.move_commands.append(TurtleBotController.MoveCommand(linear, angular, duration))
     
     def timer_callback(self):
+        if self.done:
+            return
+
+        if self.desired_theta is None or self.desired_x is None or self.desired_y is None:
+            return
+        
+        if self.current_theta is None or self.current_x is None or self.current_y is None:
+            return
+
+        if math.abs(self.current_theta - self.desired_theta) < 0.01:
+            self.done = True
+            return
+        
+        twist = Twist()
+
+        twist.linear.x = 0.15
+
+        twist.angular.z = self.theta_controller.update(self.desired_theta - self.current_theta, 0.1)
+
+        self.cmd_vel_publisher.publish(twist)
+
         time = self.get_clock().now().nanoseconds
-        if len(self.move_commands) > 0:
-            if time - self.time_command_started > self.move_commands[0].duration:
-                self.move_commands.pop(0)
-                self.time_command_started = self.get_clock().now().nanoseconds
 
-                if len(self.move_commands) == 0:
-                    self.cmd_vel_publisher.publish(Twist())
-                    self.get_logger().info('No more commands')
-                    self.done = True
-                    return
-            
-            self.state_records['cmd_vel_linear'].append((time - self.start_time, self.move_commands[0].twist.linear.x))
-            self.state_records['cmd_vel_angular'].append((time - self.start_time, self.move_commands[0].twist.angular.z))
+        self.state_records['cmd_vel_linear'].append(twist.linear.x)
+        self.state_records['cmd_vel_angular'].append(twist.angular.z)
+    
+    def odom_callback(self, msg):
+        self.current_x = msg.pose.pose.position.x
+        self.current_y = msg.pose.pose.position.y
+        self.current_theta = euler_from_quaternion(msg.pose.pose.orientation.x, msg.pose.pose.orientation.y, msg.pose.pose.orientation.z, msg.pose.pose.orientation.w)[2]
 
-            self.cmd_vel_publisher.publish(self.move_commands[0].twist)
             
     def odom_callback(self, msg):
-        time = self.get_clock().now().nanoseconds
-        self.get_logger().info('Odometry: {}'.format(msg.pose.pose.position))
 
-        self.state_records['x'].append((time - self.start_time, msg.pose.pose.position.x))
-        self.state_records['y'].append((time - self.start_time, msg.pose.pose.position.y))
-        theta = euler_from_quaternion(msg.pose.pose.orientation.x, msg.pose.pose.orientation.y, msg.pose.pose.orientation.z, msg.pose.pose.orientation.w)[2]
-        self.state_records['theta'].append((time - self.start_time, theta))
+        self.current_x = msg.pose.pose.position.x
+        self.current_y = msg.pose.pose.position.y
+        self.current_theta = euler_from_quaternion(msg.pose.pose.orientation.x, msg.pose.pose.orientation.y, msg.pose.pose.orientation.z, msg.pose.pose.orientation.w)[2]
+
+        self.state_records['x'].append(self.current_x)
+        self.state_records['y'].append(self.current_y)
+        self.state_records['theta'].append(self.current_theta)
 
 def main(args=None):
     rclpy.init(args=args)
 
     turtlebot_controller = TurtleBotController()
 
-    turtlebot_controller.add_move_command(1.5, 0.0, 5000000000)
-    turtlebot_controller.add_move_command(0.0, -0.15, 2000000000)
-    turtlebot_controller.add_move_command(1.5, 0.0, 5000000000)
+    turtlebot_controller.desired_theta = math.pi / 2
+    turtlebot_controller.desired_x = 100
+    turtlebot_controller.desired_y = 100
 
     while not turtlebot_controller.done:
         rclpy.spin_once(turtlebot_controller)

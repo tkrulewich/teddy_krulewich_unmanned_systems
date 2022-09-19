@@ -20,7 +20,8 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'question3 = homework4.question3:main'
+            'question3 = homework4.question3:main',
+            'question4 = homework4.question4:main'
         ],
     },
 )
