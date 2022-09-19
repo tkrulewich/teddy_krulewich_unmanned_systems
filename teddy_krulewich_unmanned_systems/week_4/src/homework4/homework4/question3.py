@@ -27,8 +27,7 @@ class TurtleBotController(Node):
         self.move_commands = []
         self.start_time = self.get_clock().now().nanoseconds
         self.time_command_started = self.start_time
-
-        self.data = { 'odom': [], 'cmd_vel': [] }
+        self.done = False
     
     def add_move_command(self, linear, angular, duration):
         self.move_commands.append(TurtleBotController.MoveCommand(linear, angular, duration))
@@ -43,69 +42,13 @@ class TurtleBotController(Node):
                 if len(self.move_commands) == 0:
                     self.cmd_vel_publisher.publish(Twist())
                     self.get_logger().info('No more commands')
-                    self.destroy_timer(self.timer)
-                    self.destroy_subscription(self.odom_subscriber)
-
-                    self.plot_data()
-
+                    self.done = True
                     return
             
-            self.data['cmd_vel'].append((time, self.move_commands[0].twist))
             self.cmd_vel_publisher.publish(self.move_commands[0].twist)
             
-
-    
     def odom_callback(self, msg):
-        time = self.get_clock().now().nanoseconds
-        self.data['odom'].append((time, msg))
-
-    def plot_data(self):
-        # x_list = []
-        # y_list = []
-
-        # for odom in self.data['odom']:
-        #     x_list.append((odom[0] - self.start_time) / 1000000000)
-        #     y_list.append(odom[1].pose.pose.position.x)
-
-        # plt.plot(x_list, y_list)
-        # plt.show()
-
-        # x_list = []
-        # y_list = []
-
-        # for odom in self.data['odom']:
-        #     x_list.append((odom[0] - self.start_time) / 1000000000)
-        #     y_list.append(odom[1].pose.pose.position.y)
-
-        # plt.plot(x_list, y_list)
-        # plt.show()
-
-        fig, ax = plt.subplots(2, 1)
-    
-        x_list = []
-        y_list = []
-
-        for vel in self.data['cmd_vel']:
-            x_list.append((vel[0] - self.start_time) / 1000000000)
-            y_list.append(vel[1].linear.x)
-
-        ax[0].plot(x_list, y_list)
-        ax[0].set_ylabel('Commanded Linear Velocity (m/s)')
-        ax[0].set_xlabel('Time (s)')
-
-        x_list = []
-        y_list = []
-
-        for odom in self.data['odom']:
-            x_list.append((odom[0] - self.start_time) / 1000000000)
-            y_list.append(odom[1].twist.twist.linear.x)
-        
-        ax[1].plot(x_list, y_list)
-        ax[1].set_ylabel('Measured Linear Velocity (m/s)')
-        ax[1].set_xlabel('Time (s)')
-        plt.show()
-
-
+        self.get_logger().info('Odometry: {}'.format(msg.pose.pose.position))
 
 def main(args=None):
     rclpy.init(args=args)
@@ -116,7 +59,8 @@ def main(args=None):
     turtlebot_controller.add_move_command(0.0, -0.15, 2000000000)
     turtlebot_controller.add_move_command(1.5, 0.0, 5000000000)
 
-    rclpy.spin(turtlebot_controller)
+    while not turtlebot_controller.done:
+        rclpy.spin_once(turtlebot_controller)
 
     turtlebot_controller.destroy_node()
     rclpy.shutdown()
