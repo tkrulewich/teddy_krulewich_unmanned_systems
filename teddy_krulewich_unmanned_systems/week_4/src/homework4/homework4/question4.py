@@ -74,7 +74,7 @@ class TurtleBotController(Node):
         self.current_x = None
         self.current_y = None
 
-        self.theta_controller = PID(0.5, 0.0, 0.0)
+        self.theta_controller = PID(1, 0.5, 0.0)
 
 
     
@@ -91,38 +91,36 @@ class TurtleBotController(Node):
         if self.current_theta is None or self.current_x is None or self.current_y is None:
             return
 
-        if math.abs(self.current_theta - self.desired_theta) < 0.01:
+        time = self.get_clock().now().nanoseconds
+
+        twist = Twist()
+        twist.linear.x = 0.15
+
+        if time - self.start_time > 30000000000:
+            twist.angular.z = 0.0
+            self.cmd_vel_publisher.publish(twist)
             self.done = True
             return
         
-        twist = Twist()
 
-        twist.linear.x = 0.15
-
-        twist.angular.z = self.theta_controller.update(self.desired_theta - self.current_theta, 0.1)
+        self.theta_controller.update(self.desired_theta - self.current_theta, 0.1)
+        twist.angular.z = self.theta_controller.output
 
         self.cmd_vel_publisher.publish(twist)
 
+        self.state_records['cmd_vel_linear'].append((time, twist.linear.x))
+        self.state_records['cmd_vel_angular'].append((time, twist.angular.z))
+                
+    def odom_callback(self, msg):
         time = self.get_clock().now().nanoseconds
-
-        self.state_records['cmd_vel_linear'].append(twist.linear.x)
-        self.state_records['cmd_vel_angular'].append(twist.angular.z)
-    
-    def odom_callback(self, msg):
         self.current_x = msg.pose.pose.position.x
         self.current_y = msg.pose.pose.position.y
         self.current_theta = euler_from_quaternion(msg.pose.pose.orientation.x, msg.pose.pose.orientation.y, msg.pose.pose.orientation.z, msg.pose.pose.orientation.w)[2]
 
-            
-    def odom_callback(self, msg):
+        self.state_records['x'].append((time - self.start_time, self.current_x))
+        self.state_records['y'].append((time - self.start_time, self.current_y))
+        self.state_records['theta'].append((time - self.start_time, self.current_theta))
 
-        self.current_x = msg.pose.pose.position.x
-        self.current_y = msg.pose.pose.position.y
-        self.current_theta = euler_from_quaternion(msg.pose.pose.orientation.x, msg.pose.pose.orientation.y, msg.pose.pose.orientation.z, msg.pose.pose.orientation.w)[2]
-
-        self.state_records['x'].append(self.current_x)
-        self.state_records['y'].append(self.current_y)
-        self.state_records['theta'].append(self.current_theta)
 
 def main(args=None):
     rclpy.init(args=args)
@@ -136,21 +134,14 @@ def main(args=None):
     while not turtlebot_controller.done:
         rclpy.spin_once(turtlebot_controller)
     
-    fig, ax = plt.subplots(3, 1)
 
-    ax[0].plot([x[0] / 1000000000 for x in turtlebot_controller.state_records['cmd_vel_linear']], [x[1] for x in turtlebot_controller.state_records['cmd_vel_linear']], label='linear')
-    ax[0].set_xlabel('Time (ns)')
-    ax[0].set_ylabel('Linear Velocity (m/s)')
+    plt.plot([theta[0] / 1000000000 for theta in turtlebot_controller.state_records['theta']], [theta[1] for theta in turtlebot_controller.state_records['theta']], label='Theta Actual')
+    plt.xlabel('Time (s)')
+    plt.ylabel('Theta (rad)')
 
-    ax[1].plot([x[0] / 1000000000 for x in turtlebot_controller.state_records['cmd_vel_angular']], [x[1] for x in turtlebot_controller.state_records['cmd_vel_angular']], label='angular')
-    ax[1].set_xlabel('Time (ns)')
-    ax[1].set_ylabel('Angular Velocity (rad/s)')
-
-    ax[2].plot([x[1] for x in turtlebot_controller.state_records['x']], [y[1] for y in turtlebot_controller.state_records['y']], label='y')
-    ax[2].set_xlabel('X Position (m)')
-    ax[2].set_ylabel('Y Position (m)')
+    plt.plot([theta[0] / 1000000000 for theta in turtlebot_controller.state_records['theta']], [math.pi / 2 for theta in turtlebot_controller.state_records['theta']], label='Theta Desired')
     
-
+    plt.legend()
     plt.show()
     
 
