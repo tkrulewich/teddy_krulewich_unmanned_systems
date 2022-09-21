@@ -8,6 +8,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 import math
 
+def clamp(value, min_value, max_value):
+    return max(min(value, max_value), min_value)
+
 def euler_from_quaternion(x:float, y:float, z:float, w:float) -> tuple:
         """
         Convert a quaternion into euler angles (roll, pitch, yaw)
@@ -51,6 +54,10 @@ class PID:
         self.last_error = error
 
 class TurtleBotController(Node):
+    class Waypoint:
+        def __init__(self, x, y):
+            self.x = x
+            self.y = y
     def __init__(self):
         super().__init__('turtlebot_controller')
 
@@ -59,35 +66,51 @@ class TurtleBotController(Node):
 
 
         self.start_time = self.get_clock().now().nanoseconds
+        self.last_update = self.start_time
         self.done = False
 
         self.state_records = { 'cmd_vel_linear': [], 'cmd_vel_angular': [], 'x': [], 'y': [], 'theta': [], 'theta_des': [] }
-
-        self.desired_theta = None
-        self.desired_x = None
-        self.desired_y = None
 
         self.current_theta = None
         self.current_x = None
         self.current_y = None
 
-        self.theta_controller = PID(5, 0.00, 4)
+        self.theta_controller = PID(5, 0.0, 4)
         self.ticks = 0
+
+        self.waypoints = []
 
 
     
-    def add_move_command(self, linear, angular, duration):
-        self.move_commands.append(TurtleBotController.MoveCommand(linear, angular, duration))
+    def add_waypoint(self, x, y):
+        self.waypoints.append(self.Waypoint(x, y))
                 
     def odom_callback(self, msg):
         time = self.get_clock().now().nanoseconds
-        dt = time - self.start_time
+        dt = time - self.last_update
+
+        self.last_update = time
+
+        if len(self.waypoints) == 0:
+            self.done = True
+            twist = Twist()
+            twist.linear.x = 0.0
+            twist.angular.z = 0.0
+            self.cmd_vel_publisher.publish(twist)
+            return
 
         self.current_x = msg.pose.pose.position.x
         self.current_y = msg.pose.pose.position.y
         self.current_theta = euler_from_quaternion(msg.pose.pose.orientation.x, msg.pose.pose.orientation.y, msg.pose.pose.orientation.z, msg.pose.pose.orientation.w)[2]
 
-        self.desired_theta = math.atan2(self.desired_y - self.current_y, self.desired_x - self.current_x)
+        waypoint = self.waypoints[0]
+        distance = math.sqrt((waypoint.x - self.current_x)**2 + (waypoint.y - self.current_y)**2)
+
+        self.desired_theta = math.atan2(waypoint.y - self.current_y, waypoint.x - self.current_x)
+
+        if distance < 0.1:
+            self.waypoints.pop(0)
+            return
 
 
         if self.desired_theta - self.current_theta > math.pi:
@@ -101,7 +124,7 @@ class TurtleBotController(Node):
         self.state_records['theta_des'].append((time - self.start_time, self.desired_theta))
 
         twist = Twist()
-        twist.linear.x = 1.5
+        twist.linear.x = 0.22
 
         # if abs(self.desired_theta - self.current_theta) < 0.1:
         #     self.ticks += 1
@@ -114,18 +137,12 @@ class TurtleBotController(Node):
         #         return
         # else:
         #     self.ticks = 0
-
-        distance = math.sqrt((self.desired_x - self.current_x)**2 + (self.desired_y - self.current_y)**2)
-        if distance < 0.1:
-            twist.angular.z = 0.0
-            twist.linear.x = 0.0
-            self.cmd_vel_publisher.publish(twist)
-            self.done = True
-            return
         
 
         self.theta_controller.update(self.desired_theta - self.current_theta, dt)
         twist.angular.z = self.theta_controller.output
+
+        twist.angular.z = clamp(twist.angular.z, -2.84, 2.84)
 
         self.cmd_vel_publisher.publish(twist)
 
@@ -140,11 +157,12 @@ def main(args=None):
 
 
 
-    # while rclpy.ok():
-    turtlebot_controller.desired_theta = math.pi / 2
-    turtlebot_controller.desired_x = 0.0
-    turtlebot_controller.desired_y = 0.0
+
     turtlebot_controller.done = False
+    turtlebot_controller.add_waypoint(0, 0)
+    turtlebot_controller.add_waypoint(0, 1)
+    turtlebot_controller.add_waypoint(2, 2)
+    turtlebot_controller.add_waypoint(3, -3)
 
     while not turtlebot_controller.done:
         rclpy.spin_once(turtlebot_controller)
