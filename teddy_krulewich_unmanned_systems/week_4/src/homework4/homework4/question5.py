@@ -35,6 +35,9 @@ def euler_from_quaternion(x:float, y:float, z:float, w:float) -> tuple:
 
 
 class PID:
+    """
+    Simple PID controller for a single variable
+    """
     def __init__(self, kp, ki, kd):
         self.kp = kp
         self.ki = ki
@@ -46,6 +49,10 @@ class PID:
         self.output = 0
 
     def update(self, error, dt):
+        """
+        Update the PID controller using new error value
+        """
+        
         self.integral += error * dt
         derivative = (error - self.last_error) / dt
 
@@ -55,29 +62,41 @@ class PID:
 
 class TurtleBotController(Node):
     class Waypoint:
+        """
+        A waypoint that the turtlebot will try to reach
+        """
         def __init__(self, x, y):
             self.x = x
             self.y = y
+    
     def __init__(self):
         super().__init__('turtlebot_controller')
 
+        # create a publisher to send velocity commands to the turtlebot
         self.cmd_vel_publisher = self.create_publisher(Twist, 'cmd_vel', 10)
+        # create a subscriber to read sensor data
         self.odom_subscriber = self.create_subscription(Odometry, 'odom', self.odom_callback, 10)
 
 
+        # store the time the node was started
         self.start_time = self.get_clock().now().nanoseconds
         self.last_update = self.start_time
+
+        # the turtle bot will continue updating until this is set to true
         self.done = False
 
+        # store the state for logging and plotting
         self.state_records = { 'cmd_vel_linear': [], 'cmd_vel_angular': [], 'x': [], 'y': [], 'theta': [], 'theta_des': [] }
 
+        # current position and location of the turtlebot
         self.current_theta = None
         self.current_x = None
         self.current_y = None
 
-        self.theta_controller = PID(5, 0.0, 4)
-        self.ticks = 0
+        # create a PID controller for angular velocity
+        self.theta_controller = PID(7, 0.0, 1.0)
 
+        # the list of waypoints in order that the turtlebot will try to reach
         self.waypoints = []
 
 
@@ -86,11 +105,15 @@ class TurtleBotController(Node):
         self.waypoints.append(self.Waypoint(x, y))
                 
     def odom_callback(self, msg):
+        # get current time, time elapsed, and delta time
         time = self.get_clock().now().nanoseconds
+        time_elapsed = time - self.start_time
         dt = time - self.last_update
+        
 
         self.last_update = time
 
+        # if there are no more waypoings, stop the turtlebot
         if len(self.waypoints) == 0:
             self.done = True
             twist = Twist()
@@ -99,64 +122,60 @@ class TurtleBotController(Node):
             self.cmd_vel_publisher.publish(twist)
             return
 
+        # read sensor data to get position and heading
         self.current_x = msg.pose.pose.position.x
         self.current_y = msg.pose.pose.position.y
         self.current_theta = euler_from_quaternion(msg.pose.pose.orientation.x, msg.pose.pose.orientation.y, msg.pose.pose.orientation.z, msg.pose.pose.orientation.w)[2]
 
+        # get the current waypoing (top of list)
         waypoint = self.waypoints[0]
+        # find its distance from the turtlebot
         distance = math.sqrt((waypoint.x - self.current_x)**2 + (waypoint.y - self.current_y)**2)
-
-        self.desired_theta = math.atan2(waypoint.y - self.current_y, waypoint.x - self.current_x)
-
+        
+        # if the turtlebot is close enough to the waypoint, move on
         if distance < 0.1:
             self.waypoints.pop(0)
             return
 
+        
+        # find the angle between current position and waypoint
+        self.desired_theta = math.atan2(waypoint.y - self.current_y, waypoint.x - self.current_x)
 
+        # adjust desired angle so that it turns the shortest way
         if self.desired_theta - self.current_theta > math.pi:
             self.desired_theta = self.desired_theta - 2 * math.pi
         elif self.desired_theta - self.current_theta < -math.pi:
             self.desired_theta = self.desired_theta + 2 * math.pi
 
-        self.state_records['x'].append((time - self.start_time, self.current_x))
-        self.state_records['y'].append((time - self.start_time, self.current_y))
-        self.state_records['theta'].append((time - self.start_time, self.current_theta))
-        self.state_records['theta_des'].append((time - self.start_time, self.desired_theta))
+        # store the sensor data and desired heading for logging and plotting
+        self.state_records['x'].append((time_elapsed, self.current_x))
+        self.state_records['y'].append((time_elapsed, self.current_y))
+        self.state_records['theta'].append((time_elapsed, self.current_theta))
+        self.state_records['theta_des'].append((time_elapsed, self.desired_theta))
 
+        # set the translational velocity to 0.15 m/s
         twist = Twist()
-        twist.linear.x = 0.22
+        twist.linear.x = 0.15
 
-        # if abs(self.desired_theta - self.current_theta) < 0.1:
-        #     self.ticks += 1
-
-        #     if self.ticks >= 15:
-        #         twist.angular.z = 0.0
-        #         self.cmd_vel_publisher.publish(twist)
-        #         self.done = True
-        #         ticks = 0
-        #         return
-        # else:
-        #     self.ticks = 0
-        
-
+        # use PID controller to set the angular velocity
         self.theta_controller.update(self.desired_theta - self.current_theta, dt)
         twist.angular.z = self.theta_controller.output
 
+        # cap the angular velocity at 2.84 rad/s
         twist.angular.z = clamp(twist.angular.z, -2.84, 2.84)
 
+        # publish the velocity command to the turtlebot
         self.cmd_vel_publisher.publish(twist)
-
-        self.state_records['cmd_vel_linear'].append((time, twist.linear.x))
-        self.state_records['cmd_vel_angular'].append((time, twist.angular.z))
+        
+        # store the velocity command for logging and plotting
+        self.state_records['cmd_vel_linear'].append((time_elapsed, twist.linear.x))
+        self.state_records['cmd_vel_angular'].append((time_elapsed, twist.angular.z))
 
 
 def main(args=None):
     rclpy.init(args=args)
 
     turtlebot_controller = TurtleBotController()
-
-
-
 
     turtlebot_controller.done = False
     turtlebot_controller.add_waypoint(0, 0)
@@ -166,23 +185,17 @@ def main(args=None):
 
     while not turtlebot_controller.done:
         rclpy.spin_once(turtlebot_controller)
-
-        
-        # turtlebot_controller.desired_theta = -math.pi / 2
-        # turtlebot_controller.desired_x = 2.5
-        # turtlebot_controller.desired_y = 2.5
-        # turtlebot_controller.done = False
-
-        # while not turtlebot_controller.done:
-        #     rclpy.spin_once(turtlebot_controller)
     
-
-    plt.plot([theta[0] / 1000000000 for theta in turtlebot_controller.state_records['theta']], [theta[1] for theta in turtlebot_controller.state_records['theta']], label='Theta Actual')
+    plt.figure(1)
+    plt.plot([theta[0] / 1000000000 for theta in turtlebot_controller.state_records['theta']], [math.degrees(theta[1]) for theta in turtlebot_controller.state_records['theta']], label='Theta Actual')
     plt.xlabel('Time (s)')
-    plt.ylabel('Theta (rad)')
+    plt.ylabel('Theta (deg)')
+    plt.plot([theta_des[0] / 1000000000 for theta_des in turtlebot_controller.state_records['theta_des']], [math.degrees(theta_des[1]) for theta_des in turtlebot_controller.state_records['theta_des']], label='Theta Desired')
+    plt.legend()
 
-    plt.plot([theta_des[0] / 1000000000 for theta_des in turtlebot_controller.state_records['theta_des']], [theta_des[1] for theta_des in turtlebot_controller.state_records['theta_des']], label='Theta Desired')
-    
+    plt.figure(2)
+    plt.plot([0, 0, 2, 3],[0, 1, 2, -3], label="Optimal Path")
+    plt.plot([x[1] for x in turtlebot_controller.state_records['x']], [y[1] for y in turtlebot_controller.state_records['y']], label="Actual Path")
     plt.legend()
     plt.show()
     

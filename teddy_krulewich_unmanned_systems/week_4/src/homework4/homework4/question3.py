@@ -131,7 +131,7 @@ def main(args=None):
     # plot the angular velocity command vs time
     ax[1].plot([x[0] / 1000000000 for x in turtlebot_controller.state_records['cmd_vel_angular']], [x[1] for x in turtlebot_controller.state_records['cmd_vel_angular']], label='angular')
     ax[1].set_xlabel('Time (ns)')
-    ax[1].set_ylabel('Angular Velocity (rad/s)')
+    ax[1].set_ylabel('Angular Velocity (deg/s)')
 
     # plot the x and y position of the turtlebot, showing the path
     ax[2].plot([x[1] for x in turtlebot_controller.state_records['x']], [y[1] for y in turtlebot_controller.state_records['y']], label='y')

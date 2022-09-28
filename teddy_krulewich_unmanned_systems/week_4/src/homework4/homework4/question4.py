@@ -155,7 +155,7 @@ def main(args=None):
 
     plt.plot([theta[0] / 1000000000 for theta in turtlebot_controller.state_records['theta']], [math.degrees(theta[1]) for theta in turtlebot_controller.state_records['theta']], label='Theta Actual')
     plt.xlabel('Time (s)')
-    plt.ylabel('Theta (rad)')
+    plt.ylabel('Theta (degrees)')
 
     plt.plot([theta[0] / 1000000000 for theta in turtlebot_controller.state_records['theta']], [90.0 for theta in turtlebot_controller.state_records['theta']], label='Theta Desired')
     
@@ -165,33 +165,6 @@ def main(args=None):
 
     plt.legend()
     plt.show()
-    
-
-    turtlebot_controller.destroy_node()
-    rclpy.shutdown()
-    turtlebot_controller.desired_theta = math.pi / 2
-
-    while not turtlebot_controller.done:
-        rclpy.spin_once(turtlebot_controller)
-    
-
-    plt.plot([theta[0] / 1000000000 for theta in turtlebot_controller.state_records['theta']], [math.degrees(theta[1]) for theta in turtlebot_controller.state_records['theta']], label='Theta Actual')
-    plt.xlabel('Time (s)')
-    plt.ylabel('Theta (rad)')
-
-    plt.plot([theta[0] / 1000000000 for theta in turtlebot_controller.state_records['theta']], [90.0 for theta in turtlebot_controller.state_records['theta']], label='Theta Desired')
-    
-    # plot the 10% and 90% lines of the commanded heading
-    plt.axhline(y=81, color="black", linestyle="--")
-    plt.axhline(y=10, color="black", linestyle="--")
-
-    plt.legend()
-    plt.show()
-    
-
-    turtlebot_controller.destroy_node()
-    rclpy.shutdown()
-
 
 if __name__ == '__main__':
     main()
