@@ -83,6 +83,15 @@ class TurtleBotController(Node):
         self.current_theta = None
 
         self.theta_controller = PID(7, 0.0, 1.0)
+    
+    def save_log(self, filename):
+        """
+        Save the state records to a file
+        """
+        with open(filename, 'w') as f:
+            f.write('time,x,y,theta,cmd_vel_linear,cmd_vel_angular\n')
+            for i in range(len(self.state_records['x'])):
+                f.write(f"{self.state_records['x'][i][0]},{self.state_records['x'][i][1]},{self.state_records['y'][i][1]},{self.state_records['theta'][i][1]},{self.state_records['cmd_vel_linear'][i][1]},{self.state_records['cmd_vel_angular'][i][1]}\n")
                 
     def odom_callback(self, msg):
         # if we are done dont execute anything else
@@ -105,11 +114,6 @@ class TurtleBotController(Node):
         self.current_x = msg.pose.pose.position.x
         self.current_y = msg.pose.pose.position.y
         self.current_theta = euler_from_quaternion(msg.pose.pose.orientation.x, msg.pose.pose.orientation.y, msg.pose.pose.orientation.z, msg.pose.pose.orientation.w)[2]
-
-        # store sensor data for logging and plotting
-        self.state_records['x'].append((time_elapsed, self.current_x))
-        self.state_records['y'].append((time_elapsed, self.current_y))
-        self.state_records['theta'].append((time_elapsed, self.current_theta))
 
         # create a Twist for the velocity command
         twist = Twist()
@@ -135,6 +139,11 @@ class TurtleBotController(Node):
         # publish the velocity command to the turtlebot
         self.cmd_vel_publisher.publish(twist)
 
+        # store sensor data for logging and plotting
+        self.state_records['x'].append((time_elapsed, self.current_x))
+        self.state_records['y'].append((time_elapsed, self.current_y))
+        self.state_records['theta'].append((time_elapsed, self.current_theta))
+
         # store the velocity command for logging and plotting
         self.state_records['cmd_vel_linear'].append((time, twist.linear.x))
         self.state_records['cmd_vel_angular'].append((time, twist.angular.z))
@@ -152,6 +161,7 @@ def main(args=None):
     while not turtlebot_controller.done:
         rclpy.spin_once(turtlebot_controller)
     
+    turtlebot_controller.save_log('turtlebot_controller.csv')
 
     plt.plot([theta[0] / 1000000000 for theta in turtlebot_controller.state_records['theta']], [math.degrees(theta[1]) for theta in turtlebot_controller.state_records['theta']], label='Theta Actual')
     plt.xlabel('Time (s)')
