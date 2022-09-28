@@ -60,9 +60,6 @@ class PID:
         self.last_error = error
 
 class TurtleBotController(Node):
-    """
-    A commanded foward and rotation velocity for the turtlebot with a specified duration
-    """
     def __init__(self):
         super().__init__('turtlebot_controller')
 
