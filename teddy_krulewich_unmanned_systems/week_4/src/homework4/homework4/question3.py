@@ -68,17 +68,22 @@ class TurtleBotController(Node):
             
     def odom_callback(self, msg):
         time = self.get_clock().now().nanoseconds
+        # the total time elapsed since the node started
+        time_elapsed_total = time - self.start_time
+
+        # the time elapsed while executing current command
+        time_elapsed_command = time - self.time_command_started
 
         # store current sensor data for logging and plotting
-        self.state_records['x'].append((time - self.start_time, msg.pose.pose.position.x))
-        self.state_records['y'].append((time - self.start_time, msg.pose.pose.position.y))
+        self.state_records['x'].append((time_elapsed_total, msg.pose.pose.position.x))
+        self.state_records['y'].append((time_elapsed_total, msg.pose.pose.position.y))
         theta = euler_from_quaternion(msg.pose.pose.orientation.x, msg.pose.pose.orientation.y, msg.pose.pose.orientation.z, msg.pose.pose.orientation.w)[2]
-        self.state_records['theta'].append((time - self.start_time, theta))
+        self.state_records['theta'].append((time_elapsed_total, theta))
 
         # if we have not finished executing commands
         if len(self.velocity_commands) > 0:
             # if the current command has been executing for it's specified duration, move on to the next command
-            if time - self.time_command_started > self.velocity_commands[0].duration:
+            if time_elapsed_command >= self.velocity_commands[0].duration:
                 self.velocity_commands.pop(0)
                 self.time_command_started = self.get_clock().now().nanoseconds
 
@@ -92,8 +97,8 @@ class TurtleBotController(Node):
                     return
             
             # store the current command velocities for logging and plotting
-            self.state_records['cmd_vel_linear'].append((time - self.start_time, self.velocity_commands[0].twist.linear.x))
-            self.state_records['cmd_vel_angular'].append((time - self.start_time, self.velocity_commands[0].twist.angular.z))
+            self.state_records['cmd_vel_linear'].append((time_elapsed_total, self.velocity_commands[0].twist.linear.x))
+            self.state_records['cmd_vel_angular'].append((time_elapsed_total, self.velocity_commands[0].twist.angular.z))
             
             # publish the velocity command to the turtle bot
             self.cmd_vel_publisher.publish(self.velocity_commands[0].twist)
