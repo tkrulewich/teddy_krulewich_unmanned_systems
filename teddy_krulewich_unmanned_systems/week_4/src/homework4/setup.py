@@ -21,7 +21,10 @@ setup(
     entry_points={
         'console_scripts': [
             'question3 = homework4.question3:main',
-            'question4 = homework4.question4:main'
+            'question4 = homework4.question4:main',
+            'question5 = homework4.question5:main',
+            'question2_publisher = homework4.question2.publisher:main',
+            'question2_subscriber = homework4.question2.subscriber:main',
         ],
     },
 )
