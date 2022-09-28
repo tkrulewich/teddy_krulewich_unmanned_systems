@@ -8,6 +8,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 import math
 
+def clamp(value, min_value, max_value):
+    return max(min(value, max_value), min_value)
+
 def euler_from_quaternion(x:float, y:float, z:float, w:float) -> tuple:
         """
         Convert a quaternion into euler angles (roll, pitch, yaw)
@@ -32,6 +35,9 @@ def euler_from_quaternion(x:float, y:float, z:float, w:float) -> tuple:
 
 
 class PID:
+    """
+    Simple PID controller for a single variable
+    """
     def __init__(self, kp, ki, kd):
         self.kp = kp
         self.ki = ki
@@ -43,6 +49,9 @@ class PID:
         self.output = 0
 
     def update(self, error, dt):
+        """
+        Update the PID controller using new error value
+        """
         self.integral += error * dt
         derivative = (error - self.last_error) / dt
 
@@ -51,75 +60,89 @@ class PID:
         self.last_error = error
 
 class TurtleBotController(Node):
+    """
+    A commanded foward and rotation velocity for the turtlebot with a specified duration
+    """
     def __init__(self):
         super().__init__('turtlebot_controller')
 
+        # create a publisher to send velocity commands to the turtlebot
         self.cmd_vel_publisher = self.create_publisher(Twist, 'cmd_vel', 10)
-        timer_period = 0.1
-
-        self.timer = self.create_timer(timer_period, self.timer_callback)
+        # create a subscriber to read sensor data
         self.odom_subscriber = self.create_subscription(Odometry, 'odom', self.odom_callback, 10)
 
 
+        # store the time the node was started
         self.start_time = self.get_clock().now().nanoseconds
+        self.last_update = self.start_time
+
+        # the turtle bot will continue updating until this is set to true
         self.done = False
 
         self.state_records = { 'cmd_vel_linear': [], 'cmd_vel_angular': [], 'x': [], 'y': [], 'theta': [] }
 
+
         self.desired_theta = None
-        self.desired_x = None
-        self.desired_y = None
-
         self.current_theta = None
-        self.current_x = None
-        self.current_y = None
 
-        self.theta_controller = PID(1, 0.5, 0.0)
-
-
-    
-    def add_move_command(self, linear, angular, duration):
-        self.move_commands.append(TurtleBotController.MoveCommand(linear, angular, duration))
-    
-    def timer_callback(self):
+        self.theta_controller = PID(7, 0.0, 1.0)
+                
+    def odom_callback(self, msg):
+        # if we are done dont execute anything else
         if self.done:
             return
 
-        if self.desired_theta is None or self.desired_x is None or self.desired_y is None:
-            return
+        # if we have not set a desired heading 
+        if self.desired_theta is None:
+            self.done = True
         
-        if self.current_theta is None or self.current_x is None or self.current_y is None:
-            return
-
+        # get current time and time elapsed since the node was started
         time = self.get_clock().now().nanoseconds
+        time_elapsed = time - self.start_time
 
+        # get the dt in seconds since the last update
+        dt = (time - self.last_update)
+        
+
+        # read sensor data to get position and heading
+        self.current_x = msg.pose.pose.position.x
+        self.current_y = msg.pose.pose.position.y
+        self.current_theta = euler_from_quaternion(msg.pose.pose.orientation.x, msg.pose.pose.orientation.y, msg.pose.pose.orientation.z, msg.pose.pose.orientation.w)[2]
+
+        # store sensor data for logging and plotting
+        self.state_records['x'].append((time_elapsed, self.current_x))
+        self.state_records['y'].append((time_elapsed, self.current_y))
+        self.state_records['theta'].append((time_elapsed, self.current_theta))
+
+        # create a Twist for the velocity command
         twist = Twist()
+        # move forward at 0.15 m/s
         twist.linear.x = 0.15
 
-        if time - self.start_time > 30000000000:
+
+        # if more than 3 seconds have elapsed, stop the turtlebot
+        if time_elapsed > 3000000000: 
             twist.angular.z = 0.0
             self.cmd_vel_publisher.publish(twist)
             self.done = True
             return
         
-
-        self.theta_controller.update(self.desired_theta - self.current_theta, 0.1)
+        # run a PID controller using the error in heading
+        self.theta_controller.update(self.desired_theta - self.current_theta, dt)
+        
+        # set the angular velocity to the output of the PID controller
         twist.angular.z = self.theta_controller.output
 
+        twist.angular.z = clamp(twist.angular.z, -2.84, 2.84)
+
+        # publish the velocity command to the turtlebot
         self.cmd_vel_publisher.publish(twist)
 
+        # store the velocity command for logging and plotting
         self.state_records['cmd_vel_linear'].append((time, twist.linear.x))
         self.state_records['cmd_vel_angular'].append((time, twist.angular.z))
-                
-    def odom_callback(self, msg):
-        time = self.get_clock().now().nanoseconds
-        self.current_x = msg.pose.pose.position.x
-        self.current_y = msg.pose.pose.position.y
-        self.current_theta = euler_from_quaternion(msg.pose.pose.orientation.x, msg.pose.pose.orientation.y, msg.pose.pose.orientation.z, msg.pose.pose.orientation.w)[2]
 
-        self.state_records['x'].append((time - self.start_time, self.current_x))
-        self.state_records['y'].append((time - self.start_time, self.current_y))
-        self.state_records['theta'].append((time - self.start_time, self.current_theta))
+        self.last_update = time
 
 
 def main(args=None):
@@ -128,19 +151,43 @@ def main(args=None):
     turtlebot_controller = TurtleBotController()
 
     turtlebot_controller.desired_theta = math.pi / 2
-    turtlebot_controller.desired_x = 100
-    turtlebot_controller.desired_y = 100
 
     while not turtlebot_controller.done:
         rclpy.spin_once(turtlebot_controller)
     
 
-    plt.plot([theta[0] / 1000000000 for theta in turtlebot_controller.state_records['theta']], [theta[1] for theta in turtlebot_controller.state_records['theta']], label='Theta Actual')
+    plt.plot([theta[0] / 1000000000 for theta in turtlebot_controller.state_records['theta']], [math.degrees(theta[1]) for theta in turtlebot_controller.state_records['theta']], label='Theta Actual')
     plt.xlabel('Time (s)')
     plt.ylabel('Theta (rad)')
 
-    plt.plot([theta[0] / 1000000000 for theta in turtlebot_controller.state_records['theta']], [math.pi / 2 for theta in turtlebot_controller.state_records['theta']], label='Theta Desired')
+    plt.plot([theta[0] / 1000000000 for theta in turtlebot_controller.state_records['theta']], [90.0 for theta in turtlebot_controller.state_records['theta']], label='Theta Desired')
     
+    # plot the 10% and 90% lines of the commanded heading
+    plt.axhline(y=81, color="black", linestyle="--")
+    plt.axhline(y=10, color="black", linestyle="--")
+
+    plt.legend()
+    plt.show()
+    
+
+    turtlebot_controller.destroy_node()
+    rclpy.shutdown()
+    turtlebot_controller.desired_theta = math.pi / 2
+
+    while not turtlebot_controller.done:
+        rclpy.spin_once(turtlebot_controller)
+    
+
+    plt.plot([theta[0] / 1000000000 for theta in turtlebot_controller.state_records['theta']], [math.degrees(theta[1]) for theta in turtlebot_controller.state_records['theta']], label='Theta Actual')
+    plt.xlabel('Time (s)')
+    plt.ylabel('Theta (rad)')
+
+    plt.plot([theta[0] / 1000000000 for theta in turtlebot_controller.state_records['theta']], [90.0 for theta in turtlebot_controller.state_records['theta']], label='Theta Desired')
+    
+    # plot the 10% and 90% lines of the commanded heading
+    plt.axhline(y=81, color="black", linestyle="--")
+    plt.axhline(y=10, color="black", linestyle="--")
+
     plt.legend()
     plt.show()
     
