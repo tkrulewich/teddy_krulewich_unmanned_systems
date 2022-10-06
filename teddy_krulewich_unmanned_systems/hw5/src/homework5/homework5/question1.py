@@ -1,3 +1,4 @@
+from sympy import true
 from homework5.submodules.PathPlanning import *
 import matplotlib.pyplot as plt
 from time import time
@@ -29,6 +30,10 @@ def main():
     print(f"\t Time: {t1 - t0}")
     print(f"\t Path Length: {end.cost}")
 
+    grid.draw(show_obstacles = True)
+    plt.plot(x, y, color='red')
+    plt.show();
+
 
 
     grid.reset()
@@ -41,6 +46,10 @@ def main():
     print(f"\t Time: {t1 - t0}")
     print(f"\t Path Length: {end.cost}")
 
+    grid.draw(show_obstacles = True)
+    plt.plot(x, y, color='red')
+    plt.show();
+
 
     grid.reset()
 
@@ -51,6 +60,11 @@ def main():
     print("RRT")
     print(f"\t Time: {t1 - t0}")
     print(f"\t Path Length: {end.cost}")
+
+    grid.draw(show_obstacles = True)
+    plt.plot(x, y, color='red')
+    plt.show();
+
     
 
 

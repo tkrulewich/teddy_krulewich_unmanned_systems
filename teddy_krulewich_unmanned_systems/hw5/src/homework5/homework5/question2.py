@@ -21,15 +21,14 @@ def main(args=None):
     start = grid.nodes[(1,1)]
     end = grid.nodes[(7, 13)]
 
-    x, y = grid.dijkstras(start,end)
-
-
+    x, y = grid.a_star(start,end)
 
     x.reverse()
     y.reverse()
 
     grid.draw(show_obstacles = False)
-    plt.plot(x, y, color='red')
+
+    plt.plot(x, y, color='red', linewidth=2, label='A* Path')
     
     rclpy.init(args=args)
 
@@ -44,7 +43,9 @@ def main(args=None):
         rclpy.spin_once(turtlebot_controller)
     
 
-    plt.plot(turtlebot_controller.state_records['x'], turtlebot_controller.state_records['y'], color='blue')
+    plt.plot([x[1] for x in turtlebot_controller.state_records['x']],[y[1] for y in turtlebot_controller.state_records['y']], color='blue', linewidth=2, label='TurtleBot Actual Path')
+    
+    plt.legend()
     plt.show()
     
     turtlebot_controller.destroy_node()

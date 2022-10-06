@@ -219,58 +219,7 @@ class Grid:
         return node in self.valid_nodes and self.bounds.contains_node(node) 
     def a_star(self, start: Node, end: Node) -> tuple[list[float], list[float]]:
         """Finds the shortest path on a grid using A* algorithm"""
-        start.cost = 0
-
-        reduced = PriorityQueue()
-        reduced.put((0, start))
-
-        unvisited = set(self.nodes.values())
-        current_node : Node = start
-
-        visited = set()
-
-        # loop through unvisited nodes
-        while not reduced.empty() and current_node != end:
-            current_node = reduced.get()[1]
-
-            if (current_node in visited):
-                continue
-
-            current_node.visited = True
-            visited.add(current_node)
-            
-            # get the possible neighbors of the current node
-            for y in np.arange(current_node.y - self.spacing, current_node.y + 2 * self.spacing, self.spacing):
-                for x in np.arange(current_node.x - self.spacing, current_node.x + 2 * self.spacing, self.spacing):
-                    # if there is a neighboring node at that coordinate
-                    if ((x, y) in self.nodes):
-                        neighbor = self.nodes[(x,y)]
-                        neighbor.heruistic = neighbor.distance(end)
-                        # if the neighbor is valid and it is not our current node
-                        if (neighbor is not current_node and neighbor not in visited and self.node_valid(neighbor)):
-                            # update the cost if its less than previous cost
-                            cost = current_node.cost + current_node.distance(neighbor)
-                            if (cost < neighbor.cost):
-                                reduced.put((cost + neighbor.heruistic, neighbor))
-                                neighbor.cost = cost
-                                neighbor.parent_node = current_node
-                                
-        x_list = []
-        y_list = []
-
-        # start from the end node and work backwars to the start node
-        current_node = end
-        while current_node != None:
-            x_list.append(current_node.x)
-            y_list.append(current_node.y)
-
-            current_node = current_node.parent_node
-        
-        # plot cost of start and end
-        plt.text(start.x, start.y, str(round(start.cost, 2)), color="red", fontsize=8, horizontalalignment="center", verticalalignment = "center")
-        plt.text(end.x, end.y, str(round(end.cost, 2)), color="red", fontsize=8, horizontalalignment="center", verticalalignment = "center")
-
-        return x_list, y_list
+        return self.dijkstras(start, end, True)
     
     def get_neighbors(self, node: Node) -> list[Node]:
         """Returns a list of neighboring nodes"""
@@ -363,7 +312,7 @@ class Grid:
 
         return x_list, y_list
     
-    def dijkstras(self, start, end) -> tuple[list[float], list[float]]:
+    def dijkstras(self, start, end, use_heuristic = False) -> tuple[list[float], list[float]]:
         """Finds the shortest path on a grid using Dijkstra's algorithm"""
 
         reduced_nodes = PriorityQueue()
@@ -398,8 +347,11 @@ class Grid:
                             if (cost < neighbor.cost):
                                 neighbor.cost = cost
                                 neighbor.parent_node = current_node
-
-                                reduced_nodes.put((neighbor.cost, neighbor))
+                                if use_heuristic:
+                                    reduced_nodes.put((cost + neighbor.distance(end), neighbor))
+                                else:
+                                    neighbor.heruistic = neighbor.distance(end)
+                                    reduced_nodes.put((cost, neighbor))
             
         
         # will store x and y coordinates of nodes in path

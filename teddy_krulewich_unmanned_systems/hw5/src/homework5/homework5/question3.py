@@ -3,7 +3,7 @@ import math
 import matplotlib.pyplot as plt
 import multiprocessing
 
-cities = [(2,2), (5,3), (3,4), (6,4)]
+cities = [(0, 0), (2,2), (5,3), (3,4), (6,4)]
 
 for city in cities:
     plt.scatter(city[0], city[1])
@@ -33,7 +33,13 @@ for path in permutations(cities[1:]):
 
 print(f"Shortest path is {minPath} with a distance of {minDistance}")
 
-for i in range(len(minPath)-1):
-    plt.plot([minPath[i][0], minPath[i+1][0]], [minPath[i][1], minPath[i+1][1]], color='red')
+plt.annotate("Start", minPath[0])
+
+for i in range(1, len(minPath)):
+    current_city = minPath[i]
+    previous_city = minPath[i-1]
+
+    plt.annotate(f"Goal {cities.index(current_city)}", current_city)
+    plt.plot([current_city[0], previous_city[0]], [current_city[1], previous_city[1]], color='red')
 
 plt.show()
