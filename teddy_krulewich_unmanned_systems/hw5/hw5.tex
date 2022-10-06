@@ -77,6 +77,9 @@ Max\_y = 15
     \end{tabular}
 \end{center}
 
+Yes the results matched my expectations. Both Dijstra's and A* found the optimal path, with A* doing so a bit quicker because of the heuristic.
+RRT also found a path, but as expected it is a bit "wobbly" due to it's random nature, and is slightly less optimal than the other two methods with a higher runtime.
+
 \section*{Problem 2}
 Using the obstacle list given below, run your A* and RRT within the ROS2 (and Gazebo)
 environment. The turtlebot should follow the waypoints (just use the empty world for right now),
