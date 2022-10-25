@@ -4,7 +4,7 @@ import numpy as np
 import math
 from geometry_msgs.msg import Twist
 
-class PersuerTurtleBot(TurtleBotController):
+class EvaderTurtleBot(TurtleBotController):
     def __init__(self, namespace="", pnGAin=1.5):
         super().__init__(namespace)
 
@@ -25,6 +25,15 @@ class PersuerTurtleBot(TurtleBotController):
         time = self.get_clock().now().nanoseconds
         time_elapsed = time - self.start_time
         dt = time - self.last_update_odom
+
+        # if there are no more waypoings, stop the turtlebot
+        if time - self.start_time > 30000000000:
+            self.done = True
+            twist = Twist()
+            twist.linear.x = 0.0
+            twist.angular.z = 0.0
+            self.cmd_vel_publisher.publish(twist)
+            return
 
         self.last_update_odom = time
 
@@ -51,8 +60,19 @@ class PersuerTurtleBot(TurtleBotController):
 
         if self.evader_theta is None:
             return
-        
-        self.evader_theta = math.radians(self.evader_theta)
+
+
+        distance = msg.ranges[self.evader_theta]
+
+        if distance < 0.5:
+            twist = Twist()
+            twist.linear.x = 0.2
+            twist.angular.z = 0.8
+
+            self.cmd_vel_publisher.publish(twist)
+            return
+        else:
+            self.evader_theta = math.radians(self.evader_theta) + 3 * math.pi / 2.0
 
         if self.evader_theta > math.pi:
             self.evader_theta -= 2 * math.pi
@@ -76,7 +96,7 @@ class PersuerTurtleBot(TurtleBotController):
         turn_direction = 1.0 if self.evader_theta > 0.0 else -1.0
 
         twist = Twist()
-        twist.linear.x = 0.2
+        twist.linear.x = 0.1
         twist.angular.z = turn_direction * turn_rate
 
         twist.angular.z = clamp(twist.angular.z, -2.84, 2.84)
