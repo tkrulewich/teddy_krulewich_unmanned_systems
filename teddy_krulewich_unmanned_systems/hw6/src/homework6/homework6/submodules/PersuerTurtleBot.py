@@ -5,7 +5,7 @@ import math
 from geometry_msgs.msg import Twist
 
 class PersuerTurtleBot(TurtleBotController):
-    def __init__(self, namespace=""):
+    def __init__(self, namespace="", pnGAin=1.5):
         super().__init__(namespace)
 
         self.lidear_subscriber = self.create_subscription(LaserScan, namespace + '/scan', self.lidear_callback, 10)
@@ -13,7 +13,7 @@ class PersuerTurtleBot(TurtleBotController):
         self.evader_theta = None
         self.evader_theta_prev = None
 
-        self.PNGain = 1.5
+        self.PNGain = pnGAin
 
         self.last_update_odom = self.get_clock().now().nanoseconds
         self.last_update_lidar = self.get_clock().now().nanoseconds
