@@ -69,13 +69,13 @@ class TurtleBotController(Node):
             self.x = x
             self.y = y
     
-    def __init__(self):
-        super().__init__('turtlebot_controller')
+    def __init__(self, namespace=""):
+        super().__init__('turtlebot_controller' + namespace)
 
         # create a publisher to send velocity commands to the turtlebot
-        self.cmd_vel_publisher = self.create_publisher(Twist, 'cmd_vel', 10)
+        self.cmd_vel_publisher = self.create_publisher(Twist, namespace + '/cmd_vel', 10)
         # create a subscriber to read sensor data
-        self.odom_subscriber = self.create_subscription(Odometry, 'odom', self.odom_callback, 10)
+        self.odom_subscriber = self.create_subscription(Odometry, namespace + '/odom', self.odom_callback, 10)
 
 
         # store the time the node was started
@@ -94,7 +94,7 @@ class TurtleBotController(Node):
         self.current_y = None
 
         # create a PID controller for angular velocity
-        self.theta_controller = PID(7, 0.0, 1.0)
+        self.theta_controller = PID(7, 0.0, 0.0)
 
         # the list of waypoints in order that the turtlebot will try to reach
         self.waypoints = []
@@ -114,7 +114,7 @@ class TurtleBotController(Node):
         self.last_update = time
 
         # if there are no more waypoings, stop the turtlebot
-        if len(self.waypoints) == 0:
+        if len(self.waypoints) == 0 or time - self.start_time > 30000000000:
             self.done = True
             twist = Twist()
             twist.linear.x = 0.0
@@ -155,7 +155,7 @@ class TurtleBotController(Node):
 
         # set the translational velocity to 0.15 m/s
         twist = Twist()
-        twist.linear.x = 0.6
+        twist.linear.x = 0.1
 
         # use PID controller to set the angular velocity
         self.theta_controller.update(self.desired_theta - self.current_theta, dt)
