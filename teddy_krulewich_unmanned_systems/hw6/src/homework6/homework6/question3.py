@@ -4,15 +4,27 @@ import rclpy
 
 import matplotlib.pyplot as plt
 
+import random
+
 def main(args=None):    
     rclpy.init(args=args)
 
     evader = TurtleBotController("turtle")
     persuer = PersuerTurtleBot()
+
+    x = 2
+    y = 2
+
+    waypoints = []
     
-    evader.add_waypoint(9, 9)
+    for i in range(100):
+        x += random.random() * 1.0 - 0.5
+        y += random.random() * 1.0 - 0.5
+
+        evader.add_waypoint(x, y)
+        waypoints.append((x, y))
     
-    while not persuer.done:
+    while not evader.done:
         rclpy.spin_once(evader)
         rclpy.spin_once(persuer)
 

@@ -35,9 +35,11 @@ class PersuerTurtleBot(TurtleBotController):
         # store the sensor data and desired heading for logging and plotting
         self.state_records['x'].append((time_elapsed, self.current_x))
         self.state_records['y'].append((time_elapsed, self.current_y))
+
+        if abs(msg.pose.pose.orientation.y) > 0.03:
+            self.done = True
     
     def lidear_callback(self, msg):
-        
         # get current time, time elapsed, and delta time
         time = self.get_clock().now().nanoseconds
         time_elapsed = time - self.start_time

@@ -23,7 +23,8 @@ setup(
             'question1 = homework6.question1:main',
             'question2 = homework6.question2:main',
             'question3 = homework6.question3:main',
-            'question4 = homework6.question4:main'
+            'question4 = homework6.question4:main',
+            'question5 = homework6.question5:main'
         ],
     },
 )
