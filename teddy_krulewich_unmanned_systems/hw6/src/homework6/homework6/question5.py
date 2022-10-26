@@ -1,5 +1,6 @@
 from homework6.submodules.TurtleBot import TurtleBotController
-from homework6.submodules.PersuerTurtleBot import PersuerTurtleBot
+from homework6.homework6.submodules.PursuerTurtleBot import PursuerTurtleBot
+from homework6.submodules.EvaderTurtleBot import EvaderTurtleBot
 import rclpy
 
 import matplotlib.pyplot as plt
@@ -8,22 +9,29 @@ import csv
 def main(args=None):    
     rclpy.init(args=args)
 
-    persuer = PersuerTurtleBot()
-    
-    
-    while not persuer.done:
-        rclpy.spin_once(persuer)
+    pursuing = False
+    turtlebot = None
 
-    persuer.destroy_node()
+    if pursuing:
+        turtlebot = PursuerTurtleBot()
+    else:
+        turtlebot = EvaderTurtleBot("turtle")
+    
+    while not turtlebot.done:
+        rclpy.spin_once(turtlebot)
+
+    turtlebot.destroy_node()
 
     rclpy.shutdown()
 
+    filename = "pursuer_path.csv" if pursuing else "evader_path.csv"
+
     # save to csv
-    with open('persuer_path.csv', 'w', newline='') as csvfile:
+    with open(filename, 'w', newline='') as csvfile:
         writer = csv.writer(csvfile)
         writer.writerow(['x', 'y'])
-        for i in range(len(persuer.state_records['x'])):
-            writer.writerow([persuer.state_records['x'][i][1], persuer.state_records['y'][i][1]])
+        for i in range(len(turtlebot.state_records['x'])):
+            writer.writerow([turtlebot.state_records['x'][i][1], turtlebot.state_records['y'][i][1]])
 
 if __name__ == '__main__':
     main()

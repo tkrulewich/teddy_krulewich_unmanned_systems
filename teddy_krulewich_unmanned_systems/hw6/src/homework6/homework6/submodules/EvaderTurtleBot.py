@@ -26,6 +26,11 @@ class EvaderTurtleBot(TurtleBotController):
         time_elapsed = time - self.start_time
         dt = time - self.last_update_odom
 
+        # if we crashed into something stop
+        if abs(msg.pose.pose.orientation.y) > 0.03:
+            self.done = True
+    
+
         # if there are no more waypoings, stop the turtlebot
         if time - self.start_time > 30000000000:
             self.done = True
