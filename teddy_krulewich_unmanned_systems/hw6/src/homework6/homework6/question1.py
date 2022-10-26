@@ -1,5 +1,5 @@
 from homework6.submodules.TurtleBot import TurtleBotController
-from homework6.submodules.PersuerTurtleBot import PersuerTurtleBot
+from homework6.submodules.PursuerTurtleBot import PursuerTurtleBot
 import rclpy
 
 import matplotlib.pyplot as plt
@@ -8,7 +8,7 @@ def main(args=None):
     rclpy.init(args=args)
 
     evader = TurtleBotController("turtle")
-    persuer = PersuerTurtleBot()
+    persuer = PursuerTurtleBot()
     
     evader.add_waypoint(9, 9)
     

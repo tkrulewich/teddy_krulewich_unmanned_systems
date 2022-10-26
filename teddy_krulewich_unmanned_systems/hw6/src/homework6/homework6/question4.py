@@ -1,5 +1,5 @@
 from homework6.submodules.TurtleBot import TurtleBotController
-from homework6.submodules.PersuerTurtleBot import PersuerTurtleBot
+from homework6.submodules.PursuerTurtleBot import PursuerTurtleBot
 from homework6.submodules.EvaderTurtleBot import EvaderTurtleBot
 import rclpy
 
@@ -11,7 +11,7 @@ def main(args=None):
     rclpy.init(args=args)
 
     evader = EvaderTurtleBot("turtle", pnGAin=1.5)
-    persuer = PersuerTurtleBot()
+    persuer = PursuerTurtleBot()
 
     
     while not evader.done:

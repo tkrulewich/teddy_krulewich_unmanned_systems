@@ -1,5 +1,5 @@
 from homework6.submodules.TurtleBot import TurtleBotController
-from homework6.submodules.PersuerTurtleBot import PersuerTurtleBot
+from homework6.submodules.PursuerTurtleBot import PursuerTurtleBot
 import rclpy
 
 import matplotlib.pyplot as plt
@@ -11,13 +11,13 @@ def main(args=None):
     evader = TurtleBotController("turtle")
     
     # 10 % original value
-    # persuer = PersuerTurtleBot(pnGAin=.15)
+    # persuer = PursuerTurtleBot(pnGAin=.15)
 
     # 100 % original value
-    # persuer = PersuerTurtleBot(pnGAin=1.5)
+    # persuer = PursuerTurtleBot(pnGAin=1.5)
 
     # 1000 % original value
-    persuer = PersuerTurtleBot(pnGAin=150)
+    persuer = PursuerTurtleBot(pnGAin=150)
     
     evader.add_waypoint(9, 9)
     

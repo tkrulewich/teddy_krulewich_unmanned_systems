@@ -113,6 +113,10 @@ class TurtleBotController(Node):
 
         self.last_update = time
 
+        # if we crashed into something stop the turtlebot
+        if abs(msg.pose.pose.orientation.y) > 0.03:
+            self.done = True
+
         # if there are no more waypoings, stop the turtlebot
         if len(self.waypoints) == 0 or time - self.start_time > 30000000000:
             self.done = True
