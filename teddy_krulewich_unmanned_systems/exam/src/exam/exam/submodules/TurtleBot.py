@@ -118,7 +118,7 @@ class TurtleBotController(Node):
             self.done = True
 
         # if there are no more waypoings, stop the turtlebot
-        if len(self.waypoints) == 0 or time - self.start_time > 30000000000:
+        if len(self.waypoints) == 0:
             self.done = True
             twist = Twist()
             twist.linear.x = 0.0
