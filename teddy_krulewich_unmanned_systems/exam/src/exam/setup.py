@@ -20,11 +20,7 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'question1 = exam.question1:main',
-            'question2 = exam.question2:main',
-            'question3 = exam.question3:main',
-            'question4 = exam.question4:main',
-            'question5 = exam.question5:main'
+            'question2 = exam.question2:main'
         ],
     },
 )

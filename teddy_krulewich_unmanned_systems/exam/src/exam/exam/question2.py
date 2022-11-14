@@ -1,7 +1,7 @@
-from homework6.submodules.TurtleBot import TurtleBotController
-from homework6.submodules.PursuerTurtleBot import PursuerTurtleBot
-from homework6.submodules.EvaderTurtleBot import EvaderTurtleBot
-from homework6.submodules.PathPlanning import Grid, Obstacle
+from exam.submodules.TurtleBot import TurtleBotController
+from exam.submodules.PursuerTurtleBot import PursuerTurtleBot
+from exam.submodules.EvaderTurtleBot import EvaderTurtleBot
+from exam.submodules.PathPlanning import Grid, Obstacle
 import rclpy
 
 import matplotlib.pyplot as plt
