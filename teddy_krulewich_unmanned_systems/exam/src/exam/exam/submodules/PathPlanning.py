@@ -21,6 +21,12 @@ class Node:
 
         self.cost = math.inf
         self.heruistic = 0
+
+    def reset(self):
+        self.visited = False
+        self.cost = math.inf
+        self.parent_node = None
+        self.heruistic = 0
     
     def distance(self, other) -> float:
         return math.sqrt( (self.x - other.x)**2 + (self.y - other.y) ** 2 )
@@ -87,9 +93,9 @@ class Obstacle:
         """Draws the obstacle to the screen with a transparent circle for the infalted radius"""
         obstacle_circle = plt.Circle( (self.x, self.y), self.radius, color='blue')
         plt.gca().add_patch(obstacle_circle)
-        if (self.inflation_radius > 0):
-            inflated_circle = plt.Circle( (self.x, self.y), self.radius + self.inflation_radius, color='red', alpha=0.5)
-            plt.gca().add_patch(inflated_circle)
+        # if (self.inflation_radius > 0):
+        #     inflated_circle = plt.Circle( (self.x, self.y), self.radius + self.inflation_radius, color='red', alpha=0.5)
+        #     plt.gca().add_patch(inflated_circle)
 
 class Grid:
     def __init__(self, min_x : float, max_x : float, min_y : float, max_y : float, spacing : float):
@@ -113,6 +119,12 @@ class Grid:
                 self.valid_nodes.add(node)
                 index += 1    
     
+    def reset_nodes(self) -> None:
+        """Resets the weights of all nodes in the grid"""
+        for node in self.nodes.values():
+            node.reset()
+
+
     def get_node(self, x, y) -> Node:
         """Gets the node instance closest to a given x,y coodinate"""
 
