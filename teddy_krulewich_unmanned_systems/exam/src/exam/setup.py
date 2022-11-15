@@ -24,6 +24,9 @@ setup(
     entry_points={
         'console_scripts': [
             'question2 = exam.question2:main',
+            'question3 = exam.question3:main',
+            'question4 = exam.question4:main',
+            'question5 = exam.question5:main',
             'turtlebot_spawn = exam.turtlebot_spawn:main',
         ],
     },
