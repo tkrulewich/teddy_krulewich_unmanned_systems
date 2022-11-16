@@ -7,21 +7,30 @@ import numpy as np
 from copy import deepcopy
 
 class Chromosome:
-    distances = {}
-    paths = {}
-    cities = []
+    def __init__(self, GA, path = None):
+        self.GA = GA
 
-    def __init__(self, path, grid : Grid):
-        self.path = path
-        self.grid = grid
+        if path is None:
+            city_indices = np.random.permutation(range(1, len(self.GA.cities)))
 
-        self.distance = 0
-        self.path =  path
-        for i in range(len(path)-1):
-            city = path[i]
-            next_city = path[i+1]
-            self.distance += Chromosome.distances[(city, next_city)]
+            self.path = [self.GA.cities[0]]
+            for i in range(len(city_indices)):
+                city = self.GA.cities[city_indices[i]]
+                self.path.append(city)
+
+            self.path = tuple(self.path)
+        else:
+            self.path = path
         
+        self.distance = 0
+
+        for i in range(len(self.path)-1):
+            city = self.path[i]
+            next_city = self.path[i+1]
+            self.distance += self.GA.distances[(city, next_city)]
+
+
+
         self.fitness = -self.distance
 
         self.normalized_fitness = None
@@ -45,7 +54,7 @@ class Chromosome:
 
         new_path[index1], new_path[index2] = new_path[index2], new_path[index1]
 
-        return Chromosome(tuple(new_path), self.grid)
+        return Chromosome(self.GA, tuple(new_path))
 
     
     def __shuffle_section__(self):
@@ -59,19 +68,19 @@ class Chromosome:
         for i in range(start_index, end_index):
             new_path[i] = (new_slice[i-start_index, 0], new_slice[i-start_index, 1])
         
-        return Chromosome(tuple(new_path), self.grid)
+        return Chromosome(self.GA, tuple(new_path))
 
     def __shift_left__(self):
         new_path = list(self.path)
         new_path = [new_path[0], new_path[-1]] + new_path[1:-1]
 
-        return Chromosome(tuple(new_path), self.grid)
+        return Chromosome(self.GA, tuple(new_path))
     
     def __shift_right__(self):
         new_path = list(self.path)
         new_path = [new_path[0]] + new_path[2:] + [new_path[1]]
 
-        return Chromosome(tuple(new_path), self.grid)
+        return Chromosome(self.GA, tuple(new_path))
     
     def __move_gene__(self):
         new_path = list(self.path)
@@ -83,7 +92,7 @@ class Chromosome:
 
         new_path.insert(index2, gene)
 
-        return Chromosome(tuple(new_path), self.grid)
+        return Chromosome(self.GA, tuple(new_path))
     
     def crossover(self, gene):
         child1_path = list(self.path)
@@ -97,8 +106,8 @@ class Chromosome:
         city_set_1 = set()
         city_set_2 = set()
 
-        all_cities_1 = set(Chromosome.cities)
-        all_cities_2 = set(Chromosome.cities)
+        all_cities_1 = set(self.GA.cities)
+        all_cities_2 = set(self.GA.cities)
 
         empty_cities_1 = set()
         empty_cities_2 = set()
@@ -125,7 +134,7 @@ class Chromosome:
             city_set_2.add(child2_path[i])
             all_cities_2.remove(child2_path[i])
 
-        return Chromosome(tuple(child1_path), self.grid), Chromosome(tuple(child2_path), self.grid)
+        return Chromosome(self.GA, tuple(child1_path)), Chromosome(self.GA, tuple(child2_path))
 
 
 
@@ -142,44 +151,38 @@ class GeneticAlgorithm:
         self.cities = cities
         self.grid = grid
 
-        Chromosome.cities = cities
+        self.cities = cities
 
         self.population = []
 
         self.start_time = time.time()
+        
+        self.distances = {}
+        self.paths = {}
 
         # generate initial population
         for city1 in cities:
             for city2 in cities:
                 if city1 != city2:
-                    if (city2, city1) in Chromosome.distances:
-                        Chromosome.distances[(city1, city2)] = Chromosome.distances[(city2, city1)]
-                        Chromosome.paths[(city1, city2)] = Chromosome.paths[(city2, city1)]
+                    if (city2, city1) in self.distances:
+                        self.distances[(city1, city2)] = self.distances[(city2, city1)]
+                        self.paths[(city1, city2)] = self.paths[(city2, city1)]
                         continue
                     x, y = grid.a_star(grid.nodes[city1], grid.nodes[city2])
 
-                    Chromosome.paths[(city1, city2)] = (x, y)
+                    self.paths[(city1, city2)] = (x, y)
 
                     distance = grid.nodes[city2].cost
 
                     grid.reset_nodes()
 
-                    Chromosome.distances[(city1, city2)] = distance
+                    self.distances[(city1, city2)] = distance
         
         self.init_population()
 
     def init_population(self):
         for i in range(self.population_size):
-            city_indices = np.random.permutation(range(1, len(self.cities)))
-            path = []
-
-            for i in range(len(city_indices)):
-                city_location = self.cities[city_indices[i]]
-                path.append(city_location)
-
-            path = (self.cities[0],) + tuple(path)
-            
-            self.population.append(Chromosome(path, self.grid))
+            self.population.append(Chromosome(self))
 
     
     def run(self, iterations):
@@ -197,6 +200,13 @@ class GeneticAlgorithm:
             
 
             self.next_generation = self.population[-1:-5:-1]
+            random_lucky_few = np.random.choice(self.population, 5, replace=False)
+
+            for gene in random_lucky_few:
+                self.next_generation.append(gene)
+
+            for j in range(25):
+                self.next_generation.append(Chromosome(self))
             
 
             while len(self.next_generation) < self.population_size:
@@ -243,10 +253,6 @@ class GeneticAlgorithm:
 
         return list(parents)
 
-
-    
-
-
 def main():
     ox = [2, 2, 2, 2, 0, 1, 2, 3, 4, 5, 5, 5, 5, 5, 8, 9, 10, 11, 12, 13, 8, 8, 8, 8, 
         8, 8, 8, 2, 3, 4, 5, 6, 9, 10, 11, 12, 15, 2, 2, 2,  2,  2,  2,  5, 5,  5,  5,  5, 
@@ -264,7 +270,7 @@ def main():
 
     cities = [(0,0),  (1,1), (9,7), (1,9), (4,4), (9,4), (6,14), (3,11), (14,1), (1,14), (14,14), (7,10) ]
     
-    GA = GeneticAlgorithm(500, 0.8, 0.7, cities, grid)
+    GA = GeneticAlgorithm(500, 0.5, 0.7, cities, grid)
 
     GA.run(2000)
 
