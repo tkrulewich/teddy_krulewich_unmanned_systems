@@ -90,20 +90,26 @@ Evader Parameters: Name - turtlebot1, Start - (2.0, 1.0), Goal - (7.0, 2.0), Max
 Pursuer Parameters: Name - turtlebot2, Start - (0.0, 0.0), Maximum Speed - 0.2m/s \\ 
 Algorithms: Pursuer - Proportional Navigation, Evader - Dijkstra’s Algorithm \\
 
-
-All of the code can be found at: \\
+\bigskip
+\noindent  All of the code can be found at: \\
 \url{https://github.com/tkrulewich/teddy_krulewich_unmanned_systems/blob/main/teddy_krulewich_unmanned_systems/exam/src/exam/exam/question2.py}
 
-The code for the pursuer can be found here: \\
+\bigskip
+\noindent The code for the pursuer can be found here: \\
 \url{https://github.com/tkrulewich/teddy_krulewich_unmanned_systems/blob/main/teddy_krulewich_unmanned_systems/exam/src/exam/exam/submodules/PursuerTurtleBot.py}
 
-A plot of the pursuer and evader trajectories can be seen below:
+\bigskip
+\noindent A plot of the pursuer and evader trajectories can be seen below:
 
 \begin{figure}[h]
 \centering
-\includegraphics[width=0.8\textwidth]{images/question2.png}
-\caption{Pursuer and Evader Trajectories}
+\includegraphics[width=0.95\textwidth]{images/intercept.png}
+\caption*{Pursuer and Evader Trajectories}
 \end{figure}
+
+The default settings for the turtlebot and ros seem to be incompatible with proportional navigation. I was able to get it to work, but I had to modify the turtlebot source code and increase the update frequency of the lidar as well as the resolution.
+
+After modifying my turtle bots I ran into a different problem. The pursuer was running into walls. I was able to combat this some of the time by telling the turtlebot to only target things that didn't have a lot of consecutive. In other words, the pursuer the closest point it detects as long as that point is not close to many other points.
 
 \section{Traveling Salesman Problem with A*}
 
@@ -113,6 +119,7 @@ plot showing the obstacles, A* paths, and delivery locations. Provide the total 
 solution. How does this compare with the other possible paths (how good is the solution, are there other
 paths that have much higher travel costs)? Turn in a copy of your working code.
 
+\pagebreak
 \bigskip
 \noindent\textbf{Grid Info:} Xmin = 0, Xmax = 15, Ymin = 0, Ymax = 15, Grid Size = 0.5, Robot Radius = 0.5 \\
 \textbf{Delivery Points:} (9,4), (4,4), (1,9), (9,7), (6,14) \\
@@ -121,18 +128,21 @@ paths that have much higher travel costs)? Turn in a copy of your working code.
 (10,6), (11,6), (12,6), (15,8), (2,9), (2,10, (2,11), (2,12), (2,13), (5,9), (5,10), (5,11), (5,12), (5,13),
 (5,14), (5,15), (6,12,0.5), (7,12), (8,12), (9,12), (10,12), (11,12), (12,8), (12,9), (12,10), (12,11), (12,12) \\
 
-\textbf{Note: See obstacle problem2.py on Canvas for obstacle list typed in already. This should
+\noindent \textbf{Note: See obstacle problem2.py on Canvas for obstacle list typed in already. This should
 save you from any copy-paste errors.}
 
 \bigskip
 \noindent The code can be found here: \\
 \url{https://github.com/tkrulewich/teddy_krulewich_unmanned_systems/blob/main/teddy_krulewich_unmanned_systems/exam/src/exam/exam/question3.py}
 
-Since there are 5 cities, there are 5! or 120 different possible paths. I'm not going to show all of them, but here are a few:
+\bigskip
+\noindent Since there are 5 cities, there are 5! or 120 different possible paths. I'm not going to show all of them, but here are a few:
 
 
 \bigskip
-The best path found by brute force was () and a plot is seen below:
+\noindent The best path found by brute force was \\
+Path: (0, 0), (4, 4), (9, 4), (1, 9), (9, 7), (6, 14) \\
+Distance: 54.970562748477136 and a plot is seen below:
 
 \begin{figure}[H]
 \centering
@@ -163,17 +173,19 @@ save you from any copy-paste errors.}
 \bigskip
 The code can be found here: \\
 \url{https://github.com/tkrulewich/teddy_krulewich_unmanned_systems/blob/main/teddy_krulewich_unmanned_systems/exam/src/exam/exam/question4.py}
+\\
 
+\noindent The best path found by brute force was \\
 
-The best path found by brute force was () and a plot is seen below:
+\noindent Path: (0, 0), (1, 1), (4, 4), (14, 1), (9, 4), (9, 7), (7, 10), (3, 11), (1, 9), (1, 14), (6, 14), (14, 14) \\ \\
+Distance: 75.55634918610404 \\
+Time taken: 54.20994830131531 seconds
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.75\textwidth]{images/question4.png}
 \caption*{11 City TSP Path With Obstacles}
 \end{figure}
-
-Computational time about 57 seconds.
 
 \section{Super TSP - Genetic Algorithm}
 
@@ -189,5 +201,25 @@ path cost (or fitness). This is an easy solution that doesn’t require a lot of
 \noindent Use a population size of 500, with 2,000 generations. \\
 Provide the computation time, and best path cost. \\
 Provide a plot of the obstacles with path (identical to previous problems).
+
+\bigskip
+\noindent The code can be found here: \\
+\url{https://github.com/tkrulewich/teddy_krulewich_unmanned_systems/blob/main/teddy_krulewich_unmanned_systems/exam/src/exam/exam/question5.py}
+
+\bigskip
+\noindent I implemented my own GA for this problem, because I don't read directions well.
+My GA found the same path as the brute force method, but much more quickly.
+
+\bigskip
+\noindent Below is the output of running the GA. Output is updated every time a better path is found.
+\begin{figure}[H]
+\centering
+\includegraphics[width=1.0\textwidth]{images/question5-console.png}
+\caption*{11 City TSP Path With Obstacles}
+\end{figure}
+
+As seen above the optimal solution was actually found by generation 14 at 6.93 seconds, much faster than brute force. This did vary however, at times taking a bit longer.
+
+Running the GA to completion took longer than the brute force for this problem size, but it had actually converged upon a solution much sooner. 2000 generations took a total of 446.11 seconds.
 
 \end{document}
