@@ -1,7 +1,5 @@
 \documentclass{article}
 
-\author{Teddy Krulewich}
-\title{\vspace{-4em}HW6 ME5501 – Robotics and Unmanned Systems}
 
 \usepackage{graphicx}
 \graphicspath{ {images/} }
@@ -22,15 +20,25 @@
 \usepackage{titlesec}
 \titleformat{\subsection}[runin]{}{}{}{}[]
 
-\begin{document}
-\maketitle
+\usepackage{eso-pic}
+\newcommand\BackgroundPic{%
+\put(0,0){%
+\parbox[b][\paperheight]{\paperwidth}{%
+\vfill
+\centering
+\includegraphics[width=\paperwidth,height=\paperheight,%
+keepaspectratio]{images/signature-page.jpeg}%
+\vfill
+}}}
 
+\begin{document}
+\AddToShipoutPicture*{\BackgroundPic}
+\maketitle
+\pagebreak
 \section*{Source Code}
 
 Full source code for all problems can be found on my GitHub repository:
-\url{https://github.com/tkrulewich/teddy_krulewich_unmanned_systems/tree/main/teddy_krulewich_unmanned_systems/hw6/src/exam}
-
-
+\url{https://github.com/tkrulewich/teddy_krulewich_unmanned_systems/tree/main/teddy_krulewich_unmanned_systems/exam/src/exam}
 \section{Conceptual Questions}
 
 \subsection*{\textbf{(a)}}
@@ -107,7 +115,9 @@ Algorithms: Pursuer - Proportional Navigation, Evader - Dijkstra’s Algorithm \
 \caption*{Pursuer and Evader Trajectories}
 \end{figure}
 
-The default settings for the turtlebot and ros seem to be incompatible with proportional navigation. I was able to get it to work, but I had to modify the turtlebot source code and increase the update frequency of the lidar as well as the resolution.
+\pagebreak
+\bigskip
+\noindent The default settings for the turtlebot and ros seem to be incompatible with proportional navigation. I was able to get it to work, but I had to modify the turtlebot source code and increase the update frequency of the lidar as well as the resolution.
 
 After modifying my turtle bots I ran into a different problem. The pursuer was running into walls. I was able to combat this some of the time by telling the turtlebot to only target things that didn't have a lot of consecutive. In other words, the pursuer the closest point it detects as long as that point is not close to many other points.
 
