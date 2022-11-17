@@ -239,6 +239,7 @@ class GeneticAlgorithm:
         final_time = time.time() - self.start_time
         print(f"{iterations} iterations completed in {final_time:.2f} seconds")
         
+        
     
     def select_parents(self, k=2):
         parents = set()
@@ -272,17 +273,26 @@ def main():
     
     GA = GeneticAlgorithm(500, 0.5, 0.7, cities, grid)
 
-    GA.run(2000)
+    GA.run(100)
+
+    grid.draw()
+
+
+    minPath = GA.population[-1].path
+
+    # plot the minimum path
+
+    for i in range(1, len(minPath)):
+        current_city = minPath[i]
+        previous_city = minPath[i-1]
+
+        plt.annotate(f"Goal {cities.index(current_city)}", current_city)
+
+        plt.plot(GA.paths[(previous_city, current_city)][0], GA.paths[(previous_city, current_city)][1], 'r')
 
     
-    # print("Best fitness: ", best_gene.fitness)
-    # print(f" \t path: {best_gene.path}")
-    # print(f" \t distance: {best_gene.distance}")
 
-    # print("------------------------")
-    # print("Worst fitness: ", worst_gene.fitness)
-    # print(f" \t path: {worst_gene.path}")
-    # print(f" \t distance: {worst_gene.distance}")
+    plt.show()
         
 
 if __name__ == "__main__":
