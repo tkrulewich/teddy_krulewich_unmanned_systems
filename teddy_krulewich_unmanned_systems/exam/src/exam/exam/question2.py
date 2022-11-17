@@ -14,7 +14,7 @@ def main(args=None):
     grid = Grid(0, 15, 0, 15, 0.5)
 
     evader = TurtleBotController("evader")
-    persuer = PursuerTurtleBot("pursuer", pnGAin=1.5)
+    persuer = PursuerTurtleBot("pursuer", pnGAin=5.0)
 
     obstacle_list = [(5, 0),(5, 1),(5, 2),(5, 3),(5, 4),(0, 5),(1, 4),(2, 3),(3, 2),(3, 3)]
 
@@ -46,8 +46,14 @@ def main(args=None):
 
     rclpy.shutdown()
 
+    # plot evader path
     plt.plot([x[1] for x in evader.state_records['x']],[y[1] for y in evader.state_records['y']], color='red', linewidth=2, label='Evader Path')
+    # plot pursuer path
     plt.plot([x[1] for x in persuer.state_records['x']],[y[1] for y in persuer.state_records['y']], color='blue', linewidth=2, label='Persuer Path')
+    
+    # plot desired path of evader
+    plt.plot(x, y, color='green', linewidth=2, label='Desired Path')
+
     
     plt.legend()
     plt.show()
